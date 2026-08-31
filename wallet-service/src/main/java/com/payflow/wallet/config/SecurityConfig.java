@@ -10,6 +10,8 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
+import java.util.List;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,6 +41,7 @@ public class SecurityConfig {
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
+                .servers(List.of(new Server().url("/").description("Default API Gateway Server")))
                 .info(new Info().title("PayFlow Wallet Service").version("1.0.0").description("Wallet creation, balance inquiries, and atomic top-up/withdrawal operations"))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new Components()
