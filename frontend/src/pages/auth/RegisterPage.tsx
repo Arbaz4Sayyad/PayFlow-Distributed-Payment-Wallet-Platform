@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Lock, Mail, Phone, User, Check, ArrowRight } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -7,68 +9,53 @@ import { ROUTES } from '../../constants/routes';
 import { register as registerApi } from '../../api/auth';
 import { useAuth } from '../../hooks/useAuth';
 import { normalizeError } from '../../utils/errors';
+import { registerSchema, RegisterFormData } from '../../schemas/auth';
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      password: '',
+      confirmPassword: '',
+    },
   });
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const passwordVal = watch('password') || '';
+  const hasLength = passwordVal.length >= 8;
+  const hasUpper = /[A-Z]/.test(passwordVal);
+  const hasLower = /[a-z]/.test(passwordVal);
+  const hasNumber = /[0-9]/.test(passwordVal);
+  const hasSpecial = /[^A-Za-z0-9]/.test(passwordVal);
 
-  // Password rules validation
-  const hasLength = formData.password.length >= 8;
-  const hasUpper = /[A-Z]/.test(formData.password);
-  const hasLower = /[a-z]/.test(formData.password);
-  const hasNumber = /[0-9]/.test(formData.password);
-  const hasSpecial = /[^A-Za-z0-9]/.test(formData.password);
-  const isPasswordValid = hasLength && hasUpper && hasLower && hasNumber && hasSpecial;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!formData.email || !formData.phone || !formData.password) {
-      setErrorMsg('Please fill in all required fields.');
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setErrorMsg('Passwords do not match.');
-      return;
-    }
-
-    if (!isPasswordValid) {
-      setErrorMsg('Please meet all password complexity requirements.');
-      return;
-    }
-
-    setErrorMsg(null);
-    setLoading(true);
-
+  const onSubmit = async (data: RegisterFormData) => {
+    setServerError(null);
     try {
       const authData = await registerApi({
-        email: formData.email,
-        phone: formData.phone,
-        password: formData.password,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
+        email: data.email,
+        phone: data.phone,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
       });
       login(authData);
       navigate(ROUTES.DASHBOARD);
     } catch (err) {
       const norm = normalizeError(err);
-      setErrorMsg(norm.message);
-    } finally {
-      setLoading(false);
+      setServerError(norm.message);
     }
   };
 
@@ -86,25 +73,25 @@ export const RegisterPage: React.FC = () => {
 
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-[440px]">
         <div className="bg-white py-7 px-6 border border-slate-200 rounded-lg shadow-subtle sm:px-8">
-          <form className="space-y-3.5" onSubmit={handleSubmit}>
-            {errorMsg && (
+          <form className="space-y-3.5" onSubmit={handleSubmit(onSubmit)}>
+            {serverError && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-md text-xs font-medium text-red-700 animate-in fade-in">
-                {errorMsg}
+                {serverError}
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-3">
               <Input
                 label="First Name"
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                {...register('firstName')}
+                error={errors.firstName?.message}
                 placeholder="Arbaz"
                 prefix={<User className="w-4 h-4 text-slate-400" />}
               />
               <Input
                 label="Last Name"
-                value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                {...register('lastName')}
+                error={errors.lastName?.message}
                 placeholder="Sayyad"
               />
             </div>
@@ -113,8 +100,8 @@ export const RegisterPage: React.FC = () => {
               label="Work Email"
               type="email"
               required
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              {...register('email')}
+              error={errors.email?.message}
               placeholder="name@company.com"
               prefix={<Mail className="w-4 h-4 text-slate-400" />}
             />
@@ -123,8 +110,8 @@ export const RegisterPage: React.FC = () => {
               label="Mobile Phone (E.164)"
               type="tel"
               required
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              {...register('phone')}
+              error={errors.phone?.message}
               placeholder="+919876543210"
               description="Used for two-factor verification"
               prefix={<Phone className="w-4 h-4 text-slate-400" />}
@@ -134,8 +121,8 @@ export const RegisterPage: React.FC = () => {
               label="Password"
               type={showPassword ? 'text' : 'password'}
               required
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              {...register('password')}
+              error={errors.password?.message}
               placeholder="••••••••••••"
               prefix={<Lock className="w-4 h-4 text-slate-400" />}
               suffix={
@@ -175,15 +162,15 @@ export const RegisterPage: React.FC = () => {
               label="Confirm Password"
               type={showPassword ? 'text' : 'password'}
               required
-              value={formData.confirmPassword}
-              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+              {...register('confirmPassword')}
+              error={errors.confirmPassword?.message}
               placeholder="••••••••••••"
               prefix={<Lock className="w-4 h-4 text-slate-400" />}
             />
 
             <Button
               type="submit"
-              loading={loading}
+              loading={isSubmitting}
               className="w-full mt-2"
               rightIcon={<ArrowRight className="w-4 h-4" />}
             >

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Lock, Mail, ArrowRight } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -7,36 +9,35 @@ import { ROUTES } from '../../constants/routes';
 import { login as loginApi } from '../../api/auth';
 import { useAuth } from '../../hooks/useAuth';
 import { normalizeError } from '../../utils/errors';
+import { loginSchema, LoginFormData } from '../../schemas/auth';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
-
-  const [email, setEmail] = useState('developer@payflow.com');
-  const [password, setPassword] = useState('Password123!');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      setErrorMsg('Please enter both email and password.');
-      return;
-    }
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: 'developer@payflow.com',
+      password: 'Password123!',
+    },
+  });
 
-    setErrorMsg(null);
-    setLoading(true);
-
+  const onSubmit = async (data: LoginFormData) => {
+    setServerError(null);
     try {
-      const authData = await loginApi({ email, password });
+      const authData = await loginApi(data);
       login(authData);
       navigate(ROUTES.DASHBOARD);
     } catch (err) {
       const norm = normalizeError(err);
-      setErrorMsg(norm.message);
-    } finally {
-      setLoading(false);
+      setServerError(norm.message);
     }
   };
 
@@ -54,10 +55,10 @@ export const LoginPage: React.FC = () => {
 
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-[380px]">
         <div className="bg-white py-7 px-6 border border-slate-200 rounded-lg shadow-subtle sm:px-8">
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            {errorMsg && (
+          <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+            {serverError && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-md text-xs font-medium text-red-700 animate-in fade-in">
-                {errorMsg}
+                {serverError}
               </div>
             )}
 
@@ -65,8 +66,8 @@ export const LoginPage: React.FC = () => {
               label="Work Email"
               type="email"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              {...register('email')}
+              error={errors.email?.message}
               placeholder="name@company.com"
               prefix={<Mail className="w-4 h-4 text-slate-400" />}
               autoComplete="email"
@@ -77,8 +78,8 @@ export const LoginPage: React.FC = () => {
                 label="Password"
                 type={showPassword ? 'text' : 'password'}
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                {...register('password')}
+                error={errors.password?.message}
                 placeholder="••••••••••••"
                 prefix={<Lock className="w-4 h-4 text-slate-400" />}
                 suffix={
@@ -102,7 +103,7 @@ export const LoginPage: React.FC = () => {
 
             <Button
               type="submit"
-              loading={loading}
+              loading={isSubmitting}
               className="w-full mt-2"
               rightIcon={<ArrowRight className="w-4 h-4" />}
             >
