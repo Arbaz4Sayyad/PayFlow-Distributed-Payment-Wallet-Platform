@@ -1,0 +1,153 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: payment-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${PAYMENT_DB_NAME:payment_db}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 30000
+      connection-timeout: 20000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+    consumer:
+      group-id: payment-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+
+payflow:
+  jwt:
+    secret: ${JWT_SECRET:payflowSuperSecretProductionKeyMustBeAtLeast256BitsLongForHmacSha256!}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      walletService:
+        # Open circuit after 50% failures in last 10 calls
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        # Slow call > 2s counts as failure
+        slow-call-duration-threshold: 2s
+        slow-call-rate-threshold: 50
+        # Wait 15s in OPEN before probing
+        wait-duration-in-open-state: 15s
+        # Allow 3 test calls in HALF_OPEN
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        register-health-indicator: true
+      ledgerService:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        failure-rate-threshold: 60
+        slow-call-duration-threshold: 3s
+        slow-call-rate-threshold: 50
+        wait-duration-in-open-state: 20s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        register-health-indicator: true
+      paymentGateway:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 20
+        failure-rate-threshold: 40
+        slow-call-duration-threshold: 5s
+        slow-call-rate-threshold: 30
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 5
+        automatic-transition-from-open-to-half-open-enabled: true
+        register-health-indicator: true
+  retry:
+    instances:
+      walletService:
+        max-attempts: 3
+        wait-duration: 500ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        # Do NOT retry on client errors (4xx) — only transient failures
+        retry-exceptions:
+          - java.net.ConnectException
+          - java.net.SocketTimeoutException
+          - java.io.IOException
+        ignore-exceptions:
+          - com.payflow.common.model.exception.PayFlowException
+      ledgerService:
+        max-attempts: 3
+        wait-duration: 1s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - java.net.ConnectException
+          - java.net.SocketTimeoutException
+          - java.io.IOException
+        ignore-exceptions:
+          - com.payflow.common.model.exception.PayFlowException
+      paymentGateway:
+        max-attempts: 4
+        wait-duration: 1s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2.5
+  bulkhead:
+    instances:
+      walletService:
+        # Max 20 concurrent calls to wallet service
+        max-concurrent-calls: 20
+        max-wait-duration: 100ms
+      ledgerService:
+        max-concurrent-calls: 15
+        max-wait-duration: 100ms
+      paymentGateway:
+        max-concurrent-calls: 30
+        max-wait-duration: 200ms
+  timelimiter:
+    instances:
+      walletService:
+        timeout-duration: 3s
+        cancel-running-future: true
+      ledgerService:
+        timeout-duration: 4s
+        cancel-running-future: true
+      paymentGateway:
+        timeout-duration: 10s
+        cancel-running-future: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

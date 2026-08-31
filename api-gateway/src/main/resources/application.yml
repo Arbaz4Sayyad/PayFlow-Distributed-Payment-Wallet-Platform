@@ -1,0 +1,119 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  cloud:
+    gateway:
+      routes:
+        - id: user-service-route
+          uri: ${USER_SERVICE_URI:http://localhost:8081}
+          predicates:
+            - Path=/api/v1/auth/**, /api/v1/users/**
+        - id: wallet-service-route
+          uri: ${WALLET_SERVICE_URI:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/wallets/**
+        - id: payment-service-route
+          uri: ${PAYMENT_SERVICE_URI:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/payments/**, /api/v1/transfers/**, /api/v1/refunds/**
+        - id: ledger-service-route
+          uri: ${LEDGER_SERVICE_URI:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/transactions/**, /api/v1/ledger/**
+        - id: merchant-service-route
+          uri: ${MERCHANT_SERVICE_URI:http://localhost:8085}
+          predicates:
+            - Path=/api/v1/merchants/**
+        - id: fraud-service-route
+          uri: ${FRAUD_SERVICE_URI:http://localhost:8086}
+          predicates:
+            - Path=/api/v1/fraud/**
+        - id: notification-service-route
+          uri: ${NOTIFICATION_SERVICE_URI:http://localhost:8087}
+          predicates:
+            - Path=/api/v1/notifications/**
+
+        # Swagger / OpenAPI documentation routes
+        - id: user-service-api-docs
+          uri: ${USER_SERVICE_URI:http://localhost:8081}
+          predicates:
+            - Path=/v3/api-docs/user-service
+          filters:
+            - RewritePath=/v3/api-docs/user-service, /v3/api-docs
+        - id: wallet-service-api-docs
+          uri: ${WALLET_SERVICE_URI:http://localhost:8082}
+          predicates:
+            - Path=/v3/api-docs/wallet-service
+          filters:
+            - RewritePath=/v3/api-docs/wallet-service, /v3/api-docs
+        - id: payment-service-api-docs
+          uri: ${PAYMENT_SERVICE_URI:http://localhost:8083}
+          predicates:
+            - Path=/v3/api-docs/payment-service
+          filters:
+            - RewritePath=/v3/api-docs/payment-service, /v3/api-docs
+        - id: ledger-service-api-docs
+          uri: ${LEDGER_SERVICE_URI:http://localhost:8084}
+          predicates:
+            - Path=/v3/api-docs/ledger-service
+          filters:
+            - RewritePath=/v3/api-docs/ledger-service, /v3/api-docs
+        - id: merchant-service-api-docs
+          uri: ${MERCHANT_SERVICE_URI:http://localhost:8085}
+          predicates:
+            - Path=/v3/api-docs/merchant-service
+          filters:
+            - RewritePath=/v3/api-docs/merchant-service, /v3/api-docs
+        - id: fraud-service-api-docs
+          uri: ${FRAUD_SERVICE_URI:http://localhost:8086}
+          predicates:
+            - Path=/v3/api-docs/fraud-service
+          filters:
+            - RewritePath=/v3/api-docs/fraud-service, /v3/api-docs
+        - id: notification-service-api-docs
+          uri: ${NOTIFICATION_SERVICE_URI:http://localhost:8087}
+          predicates:
+            - Path=/v3/api-docs/notification-service
+          filters:
+            - RewritePath=/v3/api-docs/notification-service, /v3/api-docs
+
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    urls:
+      - name: 🌟 System Architecture & Platform Portal
+        url: /v3/api-docs
+      - name: 1. User & Auth Service
+        url: /v3/api-docs/user-service
+      - name: 2. Wallet Service
+        url: /v3/api-docs/wallet-service
+      - name: 3. Payment & Saga Service
+        url: /v3/api-docs/payment-service
+      - name: 4. Ledger Service
+        url: /v3/api-docs/ledger-service
+      - name: 5. Merchant Service
+        url: /v3/api-docs/merchant-service
+      - name: 6. Fraud & Risk Service
+        url: /v3/api-docs/fraud-service
+      - name: 7. Notification Service
+        url: /v3/api-docs/notification-service
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always

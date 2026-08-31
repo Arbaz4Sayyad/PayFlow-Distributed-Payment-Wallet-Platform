@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payflow-common-config
+  namespace: payflow
+data:
+  SPRING_PROFILES_ACTIVE: "kubernetes,production"
+  DB_HOST: "postgres-service.payflow.svc.cluster.local"
+  DB_PORT: "5432"
+  REDIS_HOST: "redis-service.payflow.svc.cluster.local"
+  REDIS_PORT: "6379"
+  KAFKA_BOOTSTRAP_SERVERS: "kafka-service.payflow.svc.cluster.local:9092"
+  USER_SERVICE_URI: "http://user-service.payflow.svc.cluster.local:8081"
+  WALLET_SERVICE_URI: "http://wallet-service.payflow.svc.cluster.local:8082"
+  PAYMENT_SERVICE_URI: "http://payment-service.payflow.svc.cluster.local:8083"
+  LEDGER_SERVICE_URI: "http://ledger-service.payflow.svc.cluster.local:8084"
+  MERCHANT_SERVICE_URI: "http://merchant-service.payflow.svc.cluster.local:8085"
+  FRAUD_SERVICE_URI: "http://fraud-service.payflow.svc.cluster.local:8086"
+  NOTIFICATION_SERVICE_URI: "http://notification-service.payflow.svc.cluster.local:8087"
