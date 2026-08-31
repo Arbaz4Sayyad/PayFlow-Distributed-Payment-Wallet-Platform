@@ -5,6 +5,11 @@ import com.payflow.common.model.response.ApiResponse;
 import com.payflow.common.model.response.ErrorResponse;
 import com.payflow.common.security.JwtAuthenticationFilter;
 import com.payflow.common.security.JwtTokenProvider;
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,6 +36,20 @@ public class SecurityConfig {
     public SecurityConfig(JwtTokenProvider jwtTokenProvider, ObjectMapper objectMapper) {
         this.jwtTokenProvider = jwtTokenProvider;
         this.objectMapper = objectMapper;
+    }
+
+    @Bean
+    public OpenAPI customOpenAPI() {
+        return new OpenAPI()
+                .info(new Info().title("PayFlow User & Auth Service").version("1.0.0").description("User registration, authentication, token refresh, and profile management"))
+                .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
+                .components(new Components()
+                        .addSecuritySchemes("bearerAuth", new SecurityScheme()
+                                .name("bearerAuth")
+                                .type(SecurityScheme.Type.HTTP)
+                                .scheme("bearer")
+                                .bearerFormat("JWT")
+                                .description("Enter JWT Bearer token obtained from POST /api/v1/auth/login or /api/v1/auth/register")));
     }
 
     @Bean
