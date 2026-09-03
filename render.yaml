@@ -1,0 +1,19 @@
+services:
+  # PayFlow Developer Portal & Interactive API Hub (Static Site)
+  - type: web
+    name: payflow-developer-portal
+    env: static
+    buildCommand: ""
+    staticPublishPath: ./docs/developer-portal
+    pullRequestPreviewsEnabled: true
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
