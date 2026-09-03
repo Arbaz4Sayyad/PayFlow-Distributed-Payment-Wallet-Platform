@@ -54,19 +54,20 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
 
         String rawKey = authHeader.substring(BEARER_PREFIX.length()).trim();
 
-        try {
-            UserDetails merchantPrincipal = apiKeyAuthenticator.authenticate(rawKey);
+        if (rawKey.startsWith("pf_live_")) {
+            try {
+                UserDetails merchantPrincipal = apiKeyAuthenticator.authenticate(rawKey);
 
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(
-                            merchantPrincipal, null, merchantPrincipal.getAuthorities()
-                    );
-            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(
+                                merchantPrincipal, null, merchantPrincipal.getAuthorities()
+                        );
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        } catch (BadCredentialsException ex) {
-            log.warn("API key authentication rejected for path {}: {}", request.getRequestURI(), ex.getMessage());
-            // Do NOT set SecurityContext — downstream will return 401
+            } catch (BadCredentialsException ex) {
+                log.warn("API key authentication rejected for path {}: {}", request.getRequestURI(), ex.getMessage());
+            }
         }
 
         filterChain.doFilter(request, response);

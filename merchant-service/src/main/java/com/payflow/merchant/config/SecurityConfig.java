@@ -1,5 +1,7 @@
 package com.payflow.merchant.config;
 
+import com.payflow.common.security.JwtAuthenticationFilter;
+import com.payflow.common.security.JwtTokenProvider;
 import com.payflow.merchant.security.ApiKeyAuthFilter;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -10,6 +12,8 @@ import io.swagger.v3.oas.models.servers.Server;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -19,12 +23,15 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final ApiKeyAuthFilter apiKeyAuthFilter;
+    private final JwtTokenProvider jwtTokenProvider;
 
-    public SecurityConfig(ApiKeyAuthFilter apiKeyAuthFilter) {
+    public SecurityConfig(ApiKeyAuthFilter apiKeyAuthFilter, JwtTokenProvider jwtTokenProvider) {
         this.apiKeyAuthFilter = apiKeyAuthFilter;
+        this.jwtTokenProvider = jwtTokenProvider;
     }
 
     @Bean
@@ -43,11 +50,18 @@ public class SecurityConfig {
     }
 
     @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter(jwtTokenProvider);
+    }
+
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
+                .cors(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/actuator/**",
@@ -55,8 +69,10 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
-                        .requestMatchers("/api/v1/merchants").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/merchants/*/api-keys/**").hasRole("MERCHANT")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/merchants").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/merchants/**").authenticated()
+                        .requestMatchers("/api/v1/merchants/*/api-keys/**").authenticated()
+                        .requestMatchers("/api/v1/merchants/*/suspend", "/api/v1/merchants/*/reactivate").authenticated()
                         .anyRequest().authenticated()
                 );
 

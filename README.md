@@ -158,6 +158,7 @@ k6 run performance/k6/idempotency_spike.js
 ---
 
 ## 📚 Documentation & Interview Guide
+- 🌐 **[Unified Developer Portal & Interactive API Hub](docs/developer-portal/index.html)** — Interactive API explorer with dual-mode mock sandbox & live execution, sequence flows, dynamic code generator, and engineering ADRs.
 - 📖 [Staff/Senior Engineer Interview Preparation Guide](docs/INTERVIEW_GUIDE.md) — Deep-dive architectural Q&A, trade-off analyses, and system design answers.
 - 📡 [REST API & OpenAPI Specification](docs/API_DOCUMENTATION.md) — Complete endpoint reference with request/response samples for all 8 microservices.
 - 🏛️ [System Design & FSM Blueprint](docs/SYSTEM_DESIGN.md) — CloudEvents Kafka schemas, FSM matrices, and Saga sequence diagrams.

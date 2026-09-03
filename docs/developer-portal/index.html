@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PayFlow — Developer Portal & Interactive API Hub</title>
+  <meta name="description" content="Production-grade distributed payment and digital wallet platform API portal. Explore REST endpoints, Saga orchestration, double-entry ledger, and architectural decision records.">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'><path d='M13 2L3 14h9l-1 8 10-12h-9l1-8z'/></svg>">
+</head>
+<body>
+
+  <!-- ========================================================================
+       Top Navigation & Brand Bar
+       ======================================================================== -->
+  <header class="app-header">
+    <div class="brand-section">
+      <a href="#" class="brand-logo">
+        <div class="brand-icon-wrapper">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+        </div>
+        <div class="brand-title-group">
+          <h1><span class="gradient-text">PayFlow</span></h1>
+        </div>
+      </a>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs-wrapper">
+      <button class="nav-tab-btn active" data-tab="tab-explorer">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+        API Explorer
+      </button>
+      <button class="nav-tab-btn" data-tab="tab-architecture">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+        Architecture & Flow
+      </button>
+      <button class="nav-tab-btn" data-tab="tab-adrs">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        Engineering ADRs
+      </button>
+    </nav>
+
+    <!-- Header Actions -->
+    <div class="header-actions">
+      <!-- Dual-Mode Environment Selector -->
+      <div class="env-selector-box">
+        <span class="env-status-dot" id="envStatusDot"></span>
+        <select id="envSelector" class="env-select">
+          <option value="mock">Mock Sandbox (Simulated Engine)</option>
+          <option value="live">Live Gateway (localhost:8080)</option>
+        </select>
+      </div>
+
+      <!-- Quick Export Specs -->
+      <button class="btn-export" id="btnDownloadOpenApi" title="Download OpenAPI 3.0 JSON">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        OpenAPI 3.0
+      </button>
+      <button class="btn-export" id="btnDownloadPostman" title="Download Postman Collection v2.1">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Postman v2.1
+      </button>
+
+      <!-- GitHub Repository Link with official SVG icon -->
+      <a href="https://github.com/Arbaz4Sayyad/PayFlow-Distributed-Payment-Wallet-Platform" target="_blank" rel="noopener noreferrer" class="btn-icon" title="View Source on GitHub">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+        </svg>
+      </a>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       Main Content Container
+       ======================================================================== -->
+  <main class="app-container">
+
+    <!-- Global Project Overview Banner & 4-Grid Breakdown -->
+    <section class="hero-card">
+      <div class="hero-header">
+        <div class="hero-title">
+          <h2>Distributed Payment & Digital Wallet Platform</h2>
+          <p>
+            Enterprise fintech platform engineered with Java 21, Spring Boot 3, Apache Kafka, PostgreSQL, Redis, and Kubernetes.
+            Demonstrating strict ACID consistency, distributed Saga transaction orchestration, zero-drift double-entry ledger, and sub-millisecond idempotency.
+          </p>
+        </div>
+        <div class="hero-stats-row">
+          <div class="stat-pill">
+            <span class="val">8 Services</span>
+            <span class="lbl">Microservice Grid</span>
+          </div>
+          <div class="stat-pill">
+            <span class="val">100%</span>
+            <span class="lbl">Zero Ledger Drift</span>
+          </div>
+          <div class="stat-pill">
+            <span class="val">98 Tests</span>
+            <span class="lbl">Suite Coverage</span>
+          </div>
+          <div class="stat-pill">
+            <span class="val">&lt; 10ms</span>
+            <span class="lbl">Atomic Conditional Debit</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Layman 4-Grid Business Logic Breakdown -->
+      <div class="feature-grid-4">
+        <div class="feature-card">
+          <div class="feature-icon-bar">
+            <div class="feature-icon" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">⚡</div>
+            <span style="font-family: var(--font-mono); font-size: 0.7rem; color: #818cf8;">01 / FLOW</span>
+          </div>
+          <h3>Instant P2P Transfers</h3>
+          <p>Coordinates multi-service money movements between users in milliseconds with integer minor accounting and atomic conditional SQL debits.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-bar">
+            <div class="feature-icon" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">⚖️</div>
+            <span style="font-family: var(--font-mono); font-size: 0.7rem; color: #34d399;">02 / AUDIT</span>
+          </div>
+          <h3>Double-Entry Ledger</h3>
+          <p>Every transaction records immutable debit and credit journal lines, ensuring the mathematical equation <code>Sum(Debits) == Sum(Credits)</code> never drifts.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-bar">
+            <div class="feature-icon" style="background: rgba(6, 182, 212, 0.15); color: #38bdf8;">🔒</div>
+            <span style="font-family: var(--font-mono); font-size: 0.7rem; color: #38bdf8;">03 / SAFETY</span>
+          </div>
+          <h3>Two-Tier Idempotency</h3>
+          <p>Combines fast Redis distributed locks with PostgreSQL composite unique constraints to guarantee zero double-debiting under concurrent retries.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-bar">
+            <div class="feature-icon" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">🛡️</div>
+            <span style="font-family: var(--font-mono); font-size: 0.7rem; color: #fbbf24;">04 / RECOVERY</span>
+          </div>
+          <h3>Self-Healing Sagas</h3>
+          <p>If downstream steps fail (e.g. frozen recipient wallet), the orchestrator automatically triggers compensating refunds, restoring balances deterministically.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         TAB 1: Interactive API Explorer
+         ====================================================================== -->
+    <div id="tab-explorer" class="tab-content active">
+      <div class="explorer-layout">
+
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar-panel">
+          <div class="search-box-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="apiSearchInput" class="search-input" placeholder="Search 27 endpoints & methods..." />
+          </div>
+          <div class="services-list-container" id="servicesList">
+            <!-- Rendered by app.js -->
+          </div>
+        </aside>
+
+        <!-- Symmetrical 50/50 Split Console -->
+        <section class="console-container">
+
+          <!-- Active Endpoint Banner Card -->
+          <div class="endpoint-banner-card">
+            <div class="endpoint-title-row">
+              <div class="endpoint-uri-group">
+                <span id="endpointMethodBadge" class="badge-method post">POST</span>
+                <span id="endpointPathText" class="path-text">/api/v1/payments</span>
+              </div>
+            </div>
+            <p id="endpointDescription" class="endpoint-desc">
+              Orchestrates multi-service payment saga: Redis lock -> Debit -> Credit -> Double-entry Ledger -> Kafka Outbox.
+            </p>
+          </div>
+
+          <!-- Quick Role Token Bar -->
+          <div class="auth-bar-card">
+            <div class="auth-bar-left">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              <span>Quick Auth Roles:</span>
+            </div>
+            <div class="quick-tokens-group">
+              <button class="btn-token-quick active" data-role="user">👤 Demo User</button>
+              <button class="btn-token-quick" data-role="admin">👑 Admin Role</button>
+              <button class="btn-token-quick" data-role="merchant">🏢 Merchant API Key</button>
+              <button class="btn-token-quick" data-role="clear">🧹 Clear</button>
+            </div>
+          </div>
+
+          <!-- 50/50 Symmetrical Split Grid -->
+          <div class="split-console-grid">
+
+            <!-- Left Pane: Parameters & Request Body -->
+            <div class="pane-card">
+              <div class="pane-header">
+                <h3>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                  Request Configuration
+                </h3>
+              </div>
+              <div class="pane-body">
+                <!-- Authorization Input -->
+                <div class="param-section">
+                  <div class="param-title">Authorization Token / API Key</div>
+                  <input type="text" id="authTokenInput" class="auth-token-input" placeholder="Bearer <JWT> or pf_live_<key>" />
+                </div>
+
+                <!-- Path Parameters Container -->
+                <div id="pathParamsContainer" class="param-section"></div>
+
+                <!-- Query Parameters Container -->
+                <div id="queryParamsContainer" class="param-section"></div>
+
+                <!-- Request Body Editor -->
+                <div id="bodyEditorWrapper" class="code-editor-wrapper">
+                  <div class="param-title">JSON Request Payload</div>
+                  <textarea id="requestBodyTextarea" class="code-textarea" spellcheck="false"></textarea>
+                </div>
+
+                <!-- Trigger Send Button -->
+                <button id="btnSendRequest" class="btn-send-request">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                  Send Request
+                </button>
+              </div>
+            </div>
+
+            <!-- Right Pane: Response Viewer -->
+            <div class="pane-card">
+              <div class="pane-header">
+                <h3>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                  Live Response
+                </h3>
+                <div id="responseStatusBar" class="response-status-bar">
+                  <span class="response-metric-pill">Ready to execute</span>
+                </div>
+              </div>
+              <div class="pane-body">
+                <div id="responseViewer" class="response-viewer-container">
+                  <!-- Formatted JSON by app.js -->
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Bottom Dynamic Code Generator -->
+          <div class="code-gen-card">
+            <div class="code-gen-tabs">
+              <div class="lang-tabs-group">
+                <button class="btn-lang-tab active" data-lang="curl">cURL</button>
+                <button class="btn-lang-tab" data-lang="javascript">JavaScript (Fetch)</button>
+                <button class="btn-lang-tab" data-lang="python">Python (requests)</button>
+                <button class="btn-lang-tab" data-lang="java">Java (HttpClient)</button>
+              </div>
+              <button class="btn-icon" id="btnCopyCode" title="Copy code snippet">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              </button>
+            </div>
+            <pre id="codeSnippetBox" class="code-snippet-box"><code>// Real-time code preview</code></pre>
+          </div>
+
+        </section>
+
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         TAB 2: Architecture & System Flow
+         ====================================================================== -->
+    <div id="tab-architecture" class="tab-content">
+      <div class="arch-container">
+
+        <div class="section-header-banner">
+          <h2>Microservice Topology & Port Registry</h2>
+          <p>Autonomous service grid connected via Spring Cloud Gateway, Apache Kafka event bus, and PostgreSQL multi-database tier.</p>
+        </div>
+
+        <!-- 8 Microservices Topology Grid -->
+        <div class="topology-grid">
+          <div class="service-card">
+            <div class="service-card-top">
+              <span class="service-port-badge">:8080</span>
+              <span style="color: #64748b; font-size: 0.75rem;">Gateway</span>
+            </div>
+            <h4>api-gateway</h4>
+            <span class="service-db-tag">⚡ Redis Rate Limiter</span>
+            <p class="service-desc">Spring Cloud Gateway, reverse proxy routing, CORS normalization, token extraction, and Prometheus metrics aggregation.</p>
+          </div>
+
+          <div class="service-card">
+            <div class="service-card-top">
+              <span class="service-port-badge">:8081</span>
+              <span style="color: #64748b; font-size: 0.75rem;">Auth & Identity</span>
+            </div>
+            <h4>user-service</h4>
+            <span class="service-db-tag">🗄️ user_db</span>
+            <p class="service-desc">BCrypt password hashing, JWT token rotation, refresh token family revocation, and user profile management.</p>
+          </div>
+
+          <div class="service-card">
+            <div class="service-card-top">
+              <span class="service-port-badge">:8082</span>
+              <span style="color: #64748b; font-size: 0.75rem;">Ledger Balance</span>
+            </div>
+            <h4>wallet-service</h4>
+            <span class="service-db-tag">🗄️ wallet_db</span>
+            <p class="service-desc">Authoritative wallet balance in minor units, atomic conditional debits (balance_minor >= :amount), and wallet freezing.</p>
+          </div>
+
+          <div class="service-card">
+            <div class="service-card-top">
+              <span class="service-port-badge">:8083</span>
+              <span style="color: #64748b; font-size: 0.75rem;">Saga Engine</span>
+            </div>
+            <h4>payment-service</h4>
+            <span class="service-db-tag">🗄️ payment_db</span>
+            <p class="service-desc">Centralized Saga orchestrator, backward compensating refunds, Redis idempotency locking, and Transactional Outbox.</p>
+          </div>
+
+          <div class="service-card">
+            <div class="service-card-top">
+              <span class="service-port-badge">:8084</span>
+              <span style="color: #64748b; font-size: 0.75rem;">Accounting</span>
+            </div>
+            <h4>ledger-service</h4>
+            <span class="service-db-tag">🗄️ ledger_db</span>
+            <p class="service-desc">Immutable double-entry journal entries, full statement history, and zero-drift mathematical reconciliation audit.</p>
+          </div>
+
+          <div class="service-card">
+            <div class="service-card-top">
+              <span class="service-port-badge">:8085</span>
+              <span style="color: #64748b; font-size: 0.75rem;">Merchant Security</span>
+            </div>
+            <h4>merchant-service</h4>
+            <span class="service-db-tag">🗄️ merchant_db</span>
+            <p class="service-desc">Merchant onboarding lifecycle, scoped CSPRNG API keys, single plaintext exposure, and SHA-256 hash validation.</p>
+          </div>
+
+          <div class="service-card">
+            <div class="service-card-top">
+              <span class="service-port-badge">:8086</span>
+              <span style="color: #64748b; font-size: 0.75rem;">Risk Engine</span>
+            </div>
+            <h4>fraud-service</h4>
+            <span class="service-db-tag">🗄️ fraud_db</span>
+            <p class="service-desc">Sliding-window velocity rules, IP/wallet blacklists, risk scoring algorithms, and suspicious transfer flagging.</p>
+          </div>
+
+          <div class="service-card">
+            <div class="service-card-top">
+              <span class="service-port-badge">:8087</span>
+              <span style="color: #64748b; font-size: 0.75rem;">Event Dispatch</span>
+            </div>
+            <h4>notification-service</h4>
+            <span class="service-db-tag">🗄️ notification_db</span>
+            <p class="service-desc">Event-driven Kafka listener, inbox deduplication table, and multi-channel Email/SMS/Push Strategy pattern.</p>
+          </div>
+        </div>
+
+        <!-- Interactive Sequence Flow Stepper -->
+        <div class="flow-viewer-card">
+          <div class="section-header-banner">
+            <h2>Interactive Distributed Data Flows</h2>
+            <p>Select a business flow to inspect step-by-step transaction orchestration, compensation handling, and event delivery.</p>
+          </div>
+
+          <div class="flow-selector-bar">
+            <button class="btn-flow-select active" data-flow="saga">P2P Payment Transfer (Saga & Backward Compensation)</button>
+            <button class="btn-flow-select" data-flow="ledger">Double-Entry Ledger Integrity Audit</button>
+            <button class="btn-flow-select" data-flow="outbox">Transactional Outbox & Kafka Event Streaming</button>
+            <button class="btn-flow-select" data-flow="apikey">Merchant Onboarding & CSPRNG API Key Ingestion</button>
+          </div>
+
+          <h3 id="flowTitleDisplay" style="font-size: 1.1rem; font-weight: 700; color: #38bdf8;">
+            P2P Payment Transfer (Saga & Backward Compensation)
+          </h3>
+
+          <div class="sequence-steps-list" id="sequenceStepsList">
+            <!-- Steps injected by app.js -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         TAB 3: Architectural Decision Records (ADRs)
+         ====================================================================== -->
+    <div id="tab-adrs" class="tab-content">
+      <div class="adrs-container">
+
+        <div class="section-header-banner">
+          <h2>Architectural Decision Records (ADRs)</h2>
+          <p>Documented engineering trade-offs, evaluated alternatives with pros/cons matrix, and concrete codebase implementations.</p>
+        </div>
+
+        <!-- Category Filters -->
+        <div class="adr-filter-bar">
+          <button class="btn-adr-filter active" data-cat="All">All Decisions (6)</button>
+          <button class="btn-adr-filter" data-cat="Messaging">Messaging & Sagas</button>
+          <button class="btn-adr-filter" data-cat="Security">Security & Idempotency</button>
+          <button class="btn-adr-filter" data-cat="Data">Data & Consistency</button>
+          <button class="btn-adr-filter" data-cat="Resilience">Resilience & Outbox</button>
+        </div>
+
+        <!-- ADRs Cards List -->
+        <div class="adrs-grid" id="adrsList">
+          <!-- Injected by app.js -->
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

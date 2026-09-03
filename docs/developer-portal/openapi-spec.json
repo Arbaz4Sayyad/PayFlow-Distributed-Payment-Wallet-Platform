@@ -1,0 +1,1493 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PayFlow Distributed Payment & Digital Wallet Platform API",
+    "description": "Production-grade distributed payment and digital wallet platform engineered to Tier-1 fintech standards. Features Saga distributed transactions, zero-drift double-entry ledger, two-tier idempotency, and multi-channel notifications.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "PayFlow Platform Engineering",
+      "url": "https://github.com/Arbaz4Sayyad/PayFlow-Distributed-Payment-Wallet-Platform"
+    },
+    "license": {
+      "name": "MIT License",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Local API Gateway"
+    },
+    {
+      "url": "https://api.payflow.com",
+      "description": "Production Cloud Gateway"
+    },
+    {
+      "url": "https://sandbox.payflow.com",
+      "description": "Mock Sandbox Engine"
+    }
+  ],
+  "tags": [
+    { "name": "Authentication", "description": "User registration, authentication, JWT tokens, and session termination" },
+    { "name": "Users", "description": "User profile management and admin controls" },
+    { "name": "Wallets", "description": "Authoritative wallet balance, atomic debits/credits, and freeze management" },
+    { "name": "Payments", "description": "Saga-orchestrated P2P transfers, idempotency, and refunds" },
+    { "name": "Ledger", "description": "Immutable double-entry journal postings and accounting balance audits" },
+    { "name": "Merchants", "description": "Merchant lifecycle and scoped CSPRNG SHA-256 API key management" },
+    { "name": "Fraud & Risk", "description": "Real-time risk scoring, velocity rule chain, and blacklisting" },
+    { "name": "Notifications", "description": "Event-driven asynchronous Email, SMS, and Push notifications" },
+    { "name": "System & Health", "description": "Spring Boot Actuator health, Micrometer metrics, and Prometheus scrape" }
+  ],
+  "paths": {
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register a new user account",
+        "operationId": "registerUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User successfully registered with JWT credentials",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthApiResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequestError" }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Authenticate user credentials and receive JWT + Refresh Token",
+        "operationId": "loginUser",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthApiResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/UnauthorizedError" }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Rotate refresh token and receive a new access token",
+        "operationId": "refreshToken",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RefreshTokenRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token rotated successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Revoke active refresh token",
+        "operationId": "logoutUser",
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RefreshTokenRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logout successful",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StringApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get current authenticated user profile",
+        "operationId": "getCurrentUser",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Authenticated user profile",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserProfileApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{userId}": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get user profile by ID (Admin or Self only)",
+        "operationId": "getUserById",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "d8b6b469-cc3e-4e71-93b7-8f5b64adaf05"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile retrieved",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserProfileApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{userId}/status": {
+      "patch": {
+        "tags": ["Users"],
+        "summary": "Update user status (Admin only)",
+        "operationId": "updateUserStatus",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "d8b6b469-cc3e-4e71-93b7-8f5b64adaf05"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "enum": ["ACTIVE", "SUSPENDED", "CLOSED"] },
+            "example": "ACTIVE"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User status updated",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UserProfileApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/wallets": {
+      "post": {
+        "tags": ["Wallets"],
+        "summary": "Create a new digital wallet for user",
+        "operationId": "createWallet",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateWalletRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Wallet successfully created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WalletApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/wallets/{walletId}": {
+      "get": {
+        "tags": ["Wallets"],
+        "summary": "Get wallet details by ID",
+        "operationId": "getWallet",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "11111111-1111-1111-1111-111111111111"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Wallet details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WalletApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/wallets/{walletId}/balance": {
+      "get": {
+        "tags": ["Wallets"],
+        "summary": "Get authoritative wallet balance",
+        "operationId": "getWalletBalance",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "11111111-1111-1111-1111-111111111111"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current wallet balance",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WalletBalanceApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/wallets/{walletId}/top-up": {
+      "post": {
+        "tags": ["Wallets"],
+        "summary": "Top-up funds into wallet",
+        "operationId": "topUpWallet",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "11111111-1111-1111-1111-111111111111"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/WalletOperationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Wallet topped up successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WalletBalanceApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/wallets/{walletId}/withdraw": {
+      "post": {
+        "tags": ["Wallets"],
+        "summary": "Withdraw funds from wallet (Atomic conditional debit)",
+        "operationId": "withdrawWallet",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "11111111-1111-1111-1111-111111111111"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/WalletOperationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Funds withdrawn successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WalletBalanceApiResponse" }
+              }
+            }
+          },
+          "422": { "$ref": "#/components/responses/UnprocessableEntityError" }
+        }
+      }
+    },
+    "/api/v1/wallets/{walletId}/freeze": {
+      "post": {
+        "tags": ["Wallets"],
+        "summary": "Freeze wallet (Admin only)",
+        "operationId": "freezeWallet",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "11111111-1111-1111-1111-111111111111"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Wallet frozen",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WalletApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/wallets/{walletId}/unfreeze": {
+      "post": {
+        "tags": ["Wallets"],
+        "summary": "Unfreeze wallet (Admin only)",
+        "operationId": "unfreezeWallet",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "11111111-1111-1111-1111-111111111111"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Wallet unfrozen",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WalletApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments": {
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Initiate a payment / P2P transfer (Idempotent Saga)",
+        "operationId": "initiatePayment",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" },
+            "example": "PAY-TX-987654321"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/InitiatePaymentRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Payment initiated and completed successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaymentApiResponse" }
+              }
+            }
+          },
+          "422": { "$ref": "#/components/responses/UnprocessableEntityError" }
+        }
+      }
+    },
+    "/api/v1/payments/{paymentId}": {
+      "get": {
+        "tags": ["Payments"],
+        "summary": "Get payment transaction details by ID",
+        "operationId": "getPayment",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "paymentId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "98765432-1234-5678-9abc-def012345678"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment transaction status and details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaymentApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payments/{paymentId}/refund": {
+      "post": {
+        "tags": ["Payments"],
+        "summary": "Refund a previously completed payment",
+        "operationId": "refundPayment",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "paymentId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "98765432-1234-5678-9abc-def012345678"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RefundPaymentRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment refunded successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PaymentApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ledger/entries": {
+      "post": {
+        "tags": ["Ledger"],
+        "summary": "Record an immutable, balanced double-entry journal entry (Admin only)",
+        "operationId": "recordJournalEntry",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateJournalEntryRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Balanced journal entry recorded",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JournalEntryApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ledger/transactions/{transactionId}": {
+      "get": {
+        "tags": ["Ledger"],
+        "summary": "Get journal entry and all line postings by transaction ID",
+        "operationId": "getJournalByTransactionId",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "transactionId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "98765432-1234-5678-9abc-def012345678"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Journal entry details with line items",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JournalEntryApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ledger/wallets/{walletId}": {
+      "get": {
+        "tags": ["Ledger"],
+        "summary": "Get paginated double-entry statement for a specific wallet",
+        "operationId": "getWalletStatement",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "walletId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "11111111-1111-1111-1111-111111111111"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 0 }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "default": 20 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated journal statement",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StatementApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ledger/audit/verify": {
+      "get": {
+        "tags": ["Ledger"],
+        "summary": "Execute full double-entry accounting integrity check: Sum(Debits) == Sum(Credits)",
+        "operationId": "verifyLedgerIntegrity",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Audit verification report showing zero ledger drift",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuditReportApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/merchants": {
+      "post": {
+        "tags": ["Merchants"],
+        "summary": "Register a new business merchant",
+        "operationId": "registerMerchant",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterMerchantRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Merchant profile created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MerchantApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/merchants/{merchantId}": {
+      "get": {
+        "tags": ["Merchants"],
+        "summary": "Get merchant profile by ID",
+        "operationId": "getMerchant",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "merchantId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "a5bb0fa2-ed11-47be-9f6d-1c4da7142158"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Merchant details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MerchantApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/merchants/{merchantId}/suspend": {
+      "put": {
+        "tags": ["Merchants"],
+        "summary": "Suspend merchant operations",
+        "operationId": "suspendMerchant",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "merchantId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "a5bb0fa2-ed11-47be-9f6d-1c4da7142158"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Merchant suspended",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MerchantApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/merchants/{merchantId}/reactivate": {
+      "put": {
+        "tags": ["Merchants"],
+        "summary": "Reactivate suspended merchant",
+        "operationId": "reactivateMerchant",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "merchantId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "a5bb0fa2-ed11-47be-9f6d-1c4da7142158"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Merchant reactivated",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MerchantApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/merchants/{merchantId}/api-keys": {
+      "post": {
+        "tags": ["Merchants"],
+        "summary": "Generate scoped API key with one-time raw plaintext key",
+        "operationId": "createApiKey",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "merchantId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "a5bb0fa2-ed11-47be-9f6d-1c4da7142158"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateApiKeyRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "API Key created with single rawKey exposure",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiKeyApiResponse" }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": ["Merchants"],
+        "summary": "List all active API keys for merchant (masked keys)",
+        "operationId": "listApiKeys",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "merchantId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "a5bb0fa2-ed11-47be-9f6d-1c4da7142158"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of merchant API keys",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiKeyListApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/merchants/{merchantId}/api-keys/{keyId}": {
+      "delete": {
+        "tags": ["Merchants"],
+        "summary": "Revoke merchant API key",
+        "operationId": "revokeApiKey",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "merchantId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "a5bb0fa2-ed11-47be-9f6d-1c4da7142158"
+          },
+          {
+            "name": "keyId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "80f885d2-b287-4b08-b529-e26bc634cbb5"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API key revoked successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/VoidApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fraud/evaluate": {
+      "post": {
+        "tags": ["Fraud & Risk"],
+        "summary": "Evaluate transaction against velocity rules & blacklists",
+        "operationId": "evaluateFraudRisk",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/FraudEvaluationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Risk evaluation outcome",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FraudEvaluationApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fraud/blacklist": {
+      "post": {
+        "tags": ["Fraud & Risk"],
+        "summary": "Add user or entity to blacklist (Admin only)",
+        "operationId": "addToBlacklist",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AddBlacklistRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Entity added to blacklist",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BlacklistApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fraud/flagged/{userId}": {
+      "get": {
+        "tags": ["Fraud & Risk"],
+        "summary": "Get flagged suspicious transactions for user",
+        "operationId": "getFlaggedTransactions",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "d8b6b469-cc3e-4e71-93b7-8f5b64adaf05"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of flagged transactions",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FlaggedTransactionsApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/send": {
+      "post": {
+        "tags": ["Notifications"],
+        "summary": "Dispatch multi-channel notification (Email/SMS/Push)",
+        "operationId": "sendNotification",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SendNotificationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Notification dispatched",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotificationApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/{userId}": {
+      "get": {
+        "tags": ["Notifications"],
+        "summary": "Get notification history for user",
+        "operationId": "getNotificationHistory",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "example": "d8b6b469-cc3e-4e71-93b7-8f5b64adaf05"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of user notifications",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/NotificationHistoryApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/actuator/health": {
+      "get": {
+        "tags": ["System & Health"],
+        "summary": "System and microservice cluster health status",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Platform status UP with component health checks",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/actuator/metrics": {
+      "get": {
+        "tags": ["System & Health"],
+        "summary": "Micrometer metrics catalog",
+        "operationId": "getMetrics",
+        "responses": {
+          "200": {
+            "description": "Available metric names"
+          }
+        }
+      }
+    },
+    "/actuator/prometheus": {
+      "get": {
+        "tags": ["System & Health"],
+        "summary": "Prometheus text exposition format scrape endpoint",
+        "operationId": "getPrometheusMetrics",
+        "responses": {
+          "200": {
+            "description": "Prometheus scrape metrics text",
+            "content": {
+              "text/plain": {
+                "schema": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Provide a signed JWT access token in the format 'Bearer <token>'"
+      },
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "Merchant scoped API Key prefixed with 'pf_live_'"
+      }
+    },
+    "responses": {
+      "BadRequestError": {
+        "description": "Bad Request or Validation Error",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "UnauthorizedError": {
+        "description": "Invalid credentials or missing JWT token",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "UnprocessableEntityError": {
+        "description": "Business invariant failed (e.g. INSUFFICIENT_FUNDS)",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "RegisterRequest": {
+        "type": "object",
+        "required": ["email", "password", "firstName", "lastName"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "alice@payflow.com" },
+          "password": { "type": "string", "example": "Password123!" },
+          "firstName": { "type": "string", "example": "Alice" },
+          "lastName": { "type": "string", "example": "Smith" },
+          "phone": { "type": "string", "example": "+15551234567" }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string", "format": "email", "example": "alice@payflow.com" },
+          "password": { "type": "string", "example": "Password123!" }
+        }
+      },
+      "RefreshTokenRequest": {
+        "type": "object",
+        "required": ["refreshToken"],
+        "properties": {
+          "refreshToken": { "type": "string", "example": "rt_live_9f8e2cdaf442ca63866d7f6e1fdac" }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string", "format": "uuid", "example": "d8b6b469-cc3e-4e71-93b7-8f5b64adaf05" },
+          "accessToken": { "type": "string", "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." },
+          "refreshToken": { "type": "string", "example": "rt_live_9f8e2cdaf442ca63866d7f6e1fdac" },
+          "expiresIn": { "type": "integer", "example": 900 }
+        }
+      },
+      "UserProfileResponse": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string", "format": "uuid", "example": "d8b6b469-cc3e-4e71-93b7-8f5b64adaf05" },
+          "email": { "type": "string", "example": "alice@payflow.com" },
+          "firstName": { "type": "string", "example": "Alice" },
+          "lastName": { "type": "string", "example": "Smith" },
+          "phone": { "type": "string", "example": "+15551234567" },
+          "role": { "type": "string", "example": "USER" },
+          "status": { "type": "string", "example": "ACTIVE" },
+          "createdAt": { "type": "string", "format": "date-time", "example": "2026-08-31T01:00:00Z" }
+        }
+      },
+      "CreateWalletRequest": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string", "format": "uuid", "example": "d8b6b469-cc3e-4e71-93b7-8f5b64adaf05" },
+          "currency": { "type": "string", "example": "INR" }
+        }
+      },
+      "WalletOperationRequest": {
+        "type": "object",
+        "required": ["amount", "currency"],
+        "properties": {
+          "amount": { "type": "number", "format": "double", "example": 500.00 },
+          "currency": { "type": "string", "example": "INR" },
+          "referenceId": { "type": "string", "example": "TX-TOPUP-2026-001" }
+        }
+      },
+      "WalletResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "example": "11111111-1111-1111-1111-111111111111" },
+          "userId": { "type": "string", "format": "uuid", "example": "d8b6b469-cc3e-4e71-93b7-8f5b64adaf05" },
+          "balanceMinor": { "type": "integer", "format": "int64", "example": 100000 },
+          "currency": { "type": "string", "example": "INR" },
+          "status": { "type": "string", "example": "ACTIVE" },
+          "version": { "type": "integer", "example": 0 }
+        }
+      },
+      "WalletBalanceResponse": {
+        "type": "object",
+        "properties": {
+          "walletId": { "type": "string", "format": "uuid", "example": "11111111-1111-1111-1111-111111111111" },
+          "balanceMinor": { "type": "integer", "format": "int64", "example": 100000 },
+          "balanceFormatted": { "type": "string", "example": "1,000.00 INR" },
+          "currency": { "type": "string", "example": "INR" },
+          "status": { "type": "string", "example": "ACTIVE" }
+        }
+      },
+      "InitiatePaymentRequest": {
+        "type": "object",
+        "required": ["senderWalletId", "recipientWalletId", "amount", "currency", "paymentType"],
+        "properties": {
+          "senderWalletId": { "type": "string", "format": "uuid", "example": "11111111-1111-1111-1111-111111111111" },
+          "recipientWalletId": { "type": "string", "format": "uuid", "example": "22222222-2222-2222-2222-222222222222" },
+          "amount": { "type": "number", "format": "double", "example": 250.00 },
+          "currency": { "type": "string", "example": "INR" },
+          "paymentType": { "type": "string", "enum": ["P2P_TRANSFER", "MERCHANT_CHECKOUT", "REFUND"], "example": "P2P_TRANSFER" },
+          "idempotencyKey": { "type": "string", "example": "PAY-TX-987654321" },
+          "description": { "type": "string", "example": "Lunch settlement" }
+        }
+      },
+      "PaymentResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "example": "98765432-1234-5678-9abc-def012345678" },
+          "senderWalletId": { "type": "string", "format": "uuid", "example": "11111111-1111-1111-1111-111111111111" },
+          "recipientWalletId": { "type": "string", "format": "uuid", "example": "22222222-2222-2222-2222-222222222222" },
+          "amountMinor": { "type": "integer", "format": "int64", "example": 25000 },
+          "currency": { "type": "string", "example": "INR" },
+          "status": { "type": "string", "enum": ["CREATED", "PROCESSING", "SUCCESS", "FAILED", "REFUNDED"], "example": "SUCCESS" },
+          "idempotencyKey": { "type": "string", "example": "PAY-TX-987654321" },
+          "createdAt": { "type": "string", "format": "date-time", "example": "2026-08-31T01:05:00Z" }
+        }
+      },
+      "RefundPaymentRequest": {
+        "type": "object",
+        "required": ["reason"],
+        "properties": {
+          "reason": { "type": "string", "example": "Customer return - order cancelled" }
+        }
+      },
+      "CreateJournalEntryRequest": {
+        "type": "object",
+        "required": ["transactionId", "lines"],
+        "properties": {
+          "transactionId": { "type": "string", "format": "uuid", "example": "98765432-1234-5678-9abc-def012345678" },
+          "reference": { "type": "string", "example": "TX-REF-8877" },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["walletId", "entryType", "amountMinor", "currency"],
+              "properties": {
+                "walletId": { "type": "string", "format": "uuid", "example": "11111111-1111-1111-1111-111111111111" },
+                "entryType": { "type": "string", "enum": ["DEBIT", "CREDIT"], "example": "DEBIT" },
+                "amountMinor": { "type": "integer", "format": "int64", "example": 25000 },
+                "currency": { "type": "string", "example": "INR" }
+              }
+            }
+          }
+        }
+      },
+      "JournalEntryResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6" },
+          "transactionId": { "type": "string", "format": "uuid", "example": "98765432-1234-5678-9abc-def012345678" },
+          "totalDebitMinor": { "type": "integer", "example": 25000 },
+          "totalCreditMinor": { "type": "integer", "example": 25000 },
+          "currency": { "type": "string", "example": "INR" },
+          "createdAt": { "type": "string", "format": "date-time", "example": "2026-08-31T01:05:01Z" },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string", "example": "line-01" },
+                "walletId": { "type": "string", "example": "11111111-1111-1111-1111-111111111111" },
+                "entryType": { "type": "string", "example": "DEBIT" },
+                "amountMinor": { "type": "integer", "example": 25000 }
+              }
+            }
+          }
+        }
+      },
+      "AuditBalanceReport": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "example": "BALANCED" },
+          "totalDebitsMinor": { "type": "integer", "example": 150000000 },
+          "totalCreditsMinor": { "type": "integer", "example": 150000000 },
+          "driftMinor": { "type": "integer", "example": 0 },
+          "verifiedAt": { "type": "string", "format": "date-time", "example": "2026-08-31T01:10:00Z" }
+        }
+      },
+      "RegisterMerchantRequest": {
+        "type": "object",
+        "required": ["userId", "businessName", "businessType"],
+        "properties": {
+          "userId": { "type": "string", "format": "uuid", "example": "d8b6b469-cc3e-4e71-93b7-8f5b64adaf05" },
+          "businessName": { "type": "string", "example": "Acme Payments Inc" },
+          "businessType": { "type": "string", "example": "E_COMMERCE" }
+        }
+      },
+      "MerchantResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "example": "a5bb0fa2-ed11-47be-9f6d-1c4da7142158" },
+          "userId": { "type": "string", "format": "uuid", "example": "d8b6b469-cc3e-4e71-93b7-8f5b64adaf05" },
+          "businessName": { "type": "string", "example": "Acme Payments Inc" },
+          "businessType": { "type": "string", "example": "E_COMMERCE" },
+          "status": { "type": "string", "example": "ACTIVE" },
+          "createdAt": { "type": "string", "format": "date-time", "example": "2026-08-31T01:00:00Z" }
+        }
+      },
+      "CreateApiKeyRequest": {
+        "type": "object",
+        "required": ["label"],
+        "properties": {
+          "label": { "type": "string", "example": "Production Webhook Key" }
+        }
+      },
+      "ApiKeyResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "example": "80f885d2-b287-4b08-b529-e26bc634cbb5" },
+          "merchantId": { "type": "string", "format": "uuid", "example": "a5bb0fa2-ed11-47be-9f6d-1c4da7142158" },
+          "label": { "type": "string", "example": "Production Webhook Key" },
+          "revoked": { "type": "boolean", "example": false },
+          "rawKey": { "type": "string", "nullable": true, "example": "pf_live_y7K3mPq8R1tV4wX9zB2dE5gH0jL6nS3vF8xQ1aC4eN7" }
+        }
+      },
+      "FraudEvaluationRequest": {
+        "type": "object",
+        "required": ["userId", "walletId", "amount", "currency"],
+        "properties": {
+          "userId": { "type": "string", "format": "uuid", "example": "d8b6b469-cc3e-4e71-93b7-8f5b64adaf05" },
+          "walletId": { "type": "string", "format": "uuid", "example": "11111111-1111-1111-1111-111111111111" },
+          "amount": { "type": "number", "example": 250.00 },
+          "currency": { "type": "string", "example": "INR" },
+          "ipAddress": { "type": "string", "example": "192.168.1.50" }
+        }
+      },
+      "FraudEvaluationResponse": {
+        "type": "object",
+        "properties": {
+          "decision": { "type": "string", "enum": ["APPROVED", "FLAGGED", "REJECTED"], "example": "APPROVED" },
+          "riskScore": { "type": "integer", "example": 12 },
+          "reasons": { "type": "array", "items": { "type": "string" }, "example": [] }
+        }
+      },
+      "AddBlacklistRequest": {
+        "type": "object",
+        "required": ["targetType", "targetValue", "reason"],
+        "properties": {
+          "targetType": { "type": "string", "enum": ["USER_ID", "WALLET_ID", "IP_ADDRESS"], "example": "IP_ADDRESS" },
+          "targetValue": { "type": "string", "example": "198.51.100.24" },
+          "reason": { "type": "string", "example": "Known credential stuffing origin" }
+        }
+      },
+      "SendNotificationRequest": {
+        "type": "object",
+        "required": ["userId", "type", "content"],
+        "properties": {
+          "userId": { "type": "string", "format": "uuid", "example": "d8b6b469-cc3e-4e71-93b7-8f5b64adaf05" },
+          "type": { "type": "string", "enum": ["EMAIL", "SMS", "PUSH"], "example": "EMAIL" },
+          "subject": { "type": "string", "example": "Payment Received - INR 250.00" },
+          "content": { "type": "string", "example": "Your wallet has received 250.00 INR from Alice Smith." }
+        }
+      },
+      "NotificationResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "example": "7c9e6679-7425-40de-944b-e07fc1f90ae7" },
+          "userId": { "type": "string", "format": "uuid", "example": "d8b6b469-cc3e-4e71-93b7-8f5b64adaf05" },
+          "type": { "type": "string", "example": "EMAIL" },
+          "status": { "type": "string", "example": "DELIVERED" },
+          "sentAt": { "type": "string", "format": "date-time", "example": "2026-08-31T01:05:02Z" }
+        }
+      },
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string", "example": "UP" },
+          "components": {
+            "type": "object",
+            "properties": {
+              "db": { "type": "object", "properties": { "status": { "type": "string", "example": "UP" } } },
+              "redis": { "type": "object", "properties": { "status": { "type": "string", "example": "UP" } } },
+              "kafka": { "type": "object", "properties": { "status": { "type": "string", "example": "UP" } } }
+            }
+          }
+        }
+      },
+      "AuthApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "$ref": "#/components/schemas/AuthResponse" },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      },
+      "UserProfileApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "$ref": "#/components/schemas/UserProfileResponse" },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      },
+      "WalletApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "$ref": "#/components/schemas/WalletResponse" },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      },
+      "WalletBalanceApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "$ref": "#/components/schemas/WalletBalanceResponse" },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      },
+      "PaymentApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "$ref": "#/components/schemas/PaymentResponse" },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      },
+      "JournalEntryApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "$ref": "#/components/schemas/JournalEntryResponse" },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      },
+      "StatementApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "type": "object" },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      },
+      "AuditReportApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "$ref": "#/components/schemas/AuditBalanceReport" },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      },
+      "MerchantApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "$ref": "#/components/schemas/MerchantResponse" },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      },
+      "ApiKeyApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "$ref": "#/components/schemas/ApiKeyResponse" },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      },
+      "ApiKeyListApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/ApiKeyResponse" } },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      },
+      "VoidApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "type": "object", "nullable": true },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      },
+      "FraudEvaluationApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "$ref": "#/components/schemas/FraudEvaluationResponse" },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      },
+      "BlacklistApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "type": "object" },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      },
+      "FlaggedTransactionsApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "type": "array", "items": { "type": "object" } },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      },
+      "NotificationApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "$ref": "#/components/schemas/NotificationResponse" },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      },
+      "NotificationHistoryApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/NotificationResponse" } },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      },
+      "StringApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": true },
+          "data": { "type": "string", "example": "Operation completed successfully" },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "error": {
+            "type": "object",
+            "properties": {
+              "errorCode": { "type": "string", "example": "INSUFFICIENT_FUNDS" },
+              "message": { "type": "string", "example": "Wallet balance 1000 minor is insufficient for requested debit of 5000 minor" },
+              "status": { "type": "integer", "example": 422 },
+              "path": { "type": "string", "example": "/api/v1/wallets/11111111-1111-1111-1111-111111111111/withdraw" },
+              "timestamp": { "type": "string", "format": "date-time", "example": "2026-08-31T01:05:00.123456Z" },
+              "details": { "type": "object" }
+            }
+          },
+          "traceId": { "type": "string", "example": "4f8e2cdaf442ca63" }
+        }
+      }
+    }
+  }
+}

@@ -24,6 +24,8 @@ export async function register(payload: RegisterPayload): Promise<AuthResponse> 
     email: payload.email,
     password: payload.password,
     phone: payload.phone,
+    firstName: payload.firstName || 'User',
+    lastName: payload.lastName || 'Demo',
     role: 'ROLE_USER',
   });
   return response.data.data;
