@@ -24,8 +24,8 @@ export const LoginPage: React.FC = () => {
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: 'developer@payflow.com',
-      password: 'Password123!',
+      email: '',
+      password: '',
     },
   });
 
@@ -111,7 +111,35 @@ export const LoginPage: React.FC = () => {
             </Button>
           </form>
 
-          <div className="mt-6 pt-5 border-t border-slate-100 text-center">
+          {/* Quick 1-Click Demo Access */}
+          <div className="mt-4 pt-4 border-t border-slate-100">
+            <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-3 text-center space-y-2">
+              <Button
+                variant="primary"
+                size="sm"
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium shadow-sm justify-center h-9"
+                onClick={async () => {
+                  try {
+                    const { demoLogin } = await import('../../api/demo');
+                    const authData = await demoLogin();
+                    login(authData);
+                    navigate(ROUTES.DASHBOARD);
+                  } catch (err) {
+                    const norm = normalizeError(err);
+                    setServerError(norm.message);
+                  }
+                }}
+                rightIcon={<ArrowRight className="w-3.5 h-3.5 text-emerald-400" />}
+              >
+                Continue as Demo User (John Doe)
+              </Button>
+              <div className="text-[10px] text-slate-500 font-mono">
+                demo@payflow.demo • Preloaded with ₹24,750.00
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 text-center">
             <p className="text-xs text-slate-500">
               Don't have an account?{' '}
               <Link to={ROUTES.REGISTER} className="text-blue-600 font-medium hover:underline">

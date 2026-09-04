@@ -8,7 +8,35 @@
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-EKS-326CE5.svg?style=flat&logo=kubernetes)](https://kubernetes.io/)
 [![Build Status](https://img.shields.io/badge/Build-Passing%20(98%20Tests)-success.svg)](https://github.com/)
 
-**PayFlow** is a production-grade distributed payment and digital wallet platform engineered to the standards of Tier-1 Fintechs (Stripe, Razorpay, Revolut, Block). Built with **Java 21, Spring Boot 3, Apache Kafka, PostgreSQL, Redis, and Kubernetes**, PayFlow demonstrates strict financial consistency, distributed transaction orchestration, zero-drift double-entry accounting, and multi-layer fault tolerance.
+**PayFlow** is a production-grade distributed payment and digital wallet platform engineered to the standards of Tier-1 Fintechs (Stripe, Razorpay, Revolut, Block). Built with **Java 21, Spring Boot 3, Apache Kafka, PostgreSQL, Redis, and React/Vite**, PayFlow demonstrates strict financial consistency, distributed transaction orchestration, zero-drift double-entry accounting, and multi-layer fault tolerance.
+
+---
+
+## 🚀 Recruiter Demo Environment
+
+PayFlow provides a fully populated interactive demo environment ready for immediate evaluation without requiring manual registration:
+
+### Primary Recruiter Account
+* **Name:** John Doe
+* **Email:** `demo@payflow.demo`
+* **Phone:** `+15551234567`
+* **Password:** `Demo@12345`
+* **Initial Balance:** `₹24,750.00 INR`
+
+### Secondary Demo Accounts (Transfer Recipients)
+* **Sarah Miller:** `sarah@payflow.demo` (Initial Balance: `₹12,500.00`)
+* **Rahul Sharma:** `rahul@payflow.demo` (Initial Balance: `₹18,300.00`)
+* **Alex Johnson:** `alex@payflow.demo` (Initial Balance: `₹7,850.00`)
+
+### Demo Capabilities
+* **Wallet Management:** Real-time balance queries, simulated top-ups (+₹5,000.00) and withdrawals (-₹500.00).
+* **Instant P2P Transfers:** Real payments to Sarah Miller (-₹200.00) with cryptographic idempotency keys.
+* **Double-Entry Ledger:** Zero-drift double-entry journal postings where $\sum \text{Debits} = \sum \text{Credits}$.
+* **Transaction History:** Realistic historical statements reconciling exactly with the wallet balance.
+* **Real-time Notifications:** Automated alerts triggered upon payment settlement.
+* **Resettable Sandbox:** One-click deterministic reset restoring pristine state without affecting non-demo data.
+
+> **Disclaimer:** All balances and transactions in the demo environment are simulated. No real money is involved.
 
 ---
 

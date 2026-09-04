@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -10,10 +10,18 @@ export const ProfilePage: React.FC = () => {
   const { user } = useAuth();
   const { success } = useToast();
 
-  const [firstName, setFirstName] = useState(user?.firstName || 'Arbaz');
-  const [lastName, setLastName] = useState(user?.lastName || 'Sayyad');
-  const [phone, setPhone] = useState(user?.phone || '+919876543210');
+  const [firstName, setFirstName] = useState(user?.firstName || 'John');
+  const [lastName, setLastName] = useState(user?.lastName || 'Doe');
+  const [phone, setPhone] = useState(user?.phone || '+15551234567');
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      if (user.firstName) setFirstName(user.firstName);
+      if (user.lastName) setLastName(user.lastName);
+      if (user.phone) setPhone(user.phone);
+    }
+  }, [user]);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +47,7 @@ export const ProfilePage: React.FC = () => {
             </div>
             <div>
               <h2 className="text-sm font-semibold text-slate-900">{firstName} {lastName}</h2>
-              <p className="text-xs text-slate-500">{user?.email}</p>
+              <p className="text-xs text-slate-500">{user?.email || 'demo@payflow.demo'}</p>
             </div>
           </div>
           <Badge variant="success" size="md">
@@ -65,7 +73,7 @@ export const ProfilePage: React.FC = () => {
           <Input
             label="Email Address"
             type="email"
-            value={user?.email || 'developer@payflow.com'}
+            value={user?.email || 'demo@payflow.demo'}
             disabled
             description="Email modifications require multi-factor authorization."
           />

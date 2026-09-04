@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   ArrowUpRight,
@@ -14,24 +14,87 @@ import { StatusIndicator } from '../../components/ui/StatusIndicator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
 import { ROUTES } from '../../constants/routes';
 import { useAuth } from '../../hooks/useAuth';
-import { MOCK_WALLET, MOCK_TRANSACTIONS } from '../../mocks/mockData';
+import { getWalletBalance } from '../../api/wallet';
+import { apiClient } from '../../api/client';
+import { DEMO_CONFIG } from '../../api/demo';
 import { formatDateTime } from '../../utils/dates';
+import { Transaction } from '../../types';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [wallet] = useState(MOCK_WALLET);
-  const [transactions] = useState(MOCK_TRANSACTIONS);
+  const defaultWalletId = DEMO_CONFIG.primaryUser.walletId;
+
+  const [walletBalance, setWalletBalance] = useState<number>(DEMO_CONFIG.primaryUser.initialBalance);
+  const [currency, setCurrency] = useState<string>('INR');
+  const walletId = defaultWalletId;
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchLiveDashboardData = useCallback(async () => {
+    try {
+      // 1. Live Wallet Balance from Backend
+      const balRes = await getWalletBalance(walletId);
+      if (balRes) {
+        setWalletBalance(balRes.balance);
+        setCurrency(balRes.currency || 'INR');
+      }
+    } catch {
+      // fallback to initial demo state
+    }
+
+    try {
+      // 2. Live Double-Entry Ledger Postings from Backend
+      const ledgerRes = await apiClient.get(`/v1/ledger/wallets/${walletId}`);
+      if (ledgerRes.data?.data?.content) {
+        const postings = ledgerRes.data.data.content;
+        const txns: Transaction[] = postings.map((line: any, idx: number) => ({
+          id: line.id || `line-${idx}`,
+          transactionNumber: `TXN-${String(10000 + idx).padStart(5, '0')}`,
+          senderWalletId: line.entryType === 'DEBIT' ? walletId : 'EXT-CLEARING',
+          recipientWalletId: line.entryType === 'CREDIT' ? walletId : 'EXT-VENDOR',
+          senderName: line.entryType === 'CREDIT' ? 'NetBanking / Payroll' : 'John Doe',
+          recipientName: line.entryType === 'DEBIT' ? 'Merchant / Vendor' : 'John Doe',
+          amount: line.amountMinor / 100,
+          amountMinor: line.amountMinor,
+          currency: 'INR' as const,
+          type: line.entryType === 'CREDIT' ? 'TOPUP' : 'TRANSFER',
+          status: 'COMPLETED' as const,
+          description: line.description || (line.entryType === 'CREDIT' ? 'Credit Posting' : 'Payment Debit'),
+          createdAt: line.createdAt || new Date().toISOString(),
+        }));
+        setTransactions(txns);
+      }
+    } catch {
+      // ignore
+    }
+  }, [walletId]);
+
+  useEffect(() => {
+    fetchLiveDashboardData();
+
+    const handleDataUpdate = () => {
+      fetchLiveDashboardData();
+    };
+
+    window.addEventListener('payflow:demo-reset', handleDataUpdate);
+    window.addEventListener('payflow:wallet-updated', handleDataUpdate);
+
+    return () => {
+      window.removeEventListener('payflow:demo-reset', handleDataUpdate);
+      window.removeEventListener('payflow:wallet-updated', handleDataUpdate);
+    };
+  }, [fetchLiveDashboardData]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
+    await fetchLiveDashboardData();
     setTimeout(() => {
       setIsRefreshing(false);
     }, 400);
   };
 
-  const displayName = user?.firstName || user?.email?.split('@')[0] || 'User';
+  const displayName = user?.firstName || user?.email?.split('@')[0] || 'John';
 
   return (
     <div className="space-y-6">
@@ -71,14 +134,14 @@ export const DashboardPage: React.FC = () => {
             </div>
             <div className="flex items-baseline gap-3 pt-1">
               <MoneyAmount
-                amountMinor={wallet.balanceMinor}
-                currency={wallet.currency}
+                amountMinor={Math.round(walletBalance * 100)}
+                currency={currency as any}
                 size="kpi"
               />
-              <span className="text-xs font-semibold text-slate-400">{wallet.currency}</span>
+              <span className="text-xs font-semibold text-slate-400">{currency}</span>
             </div>
             <p className="text-xs text-slate-500 pt-0.5">
-              Wallet ID: <span className="font-mono text-slate-700 font-medium">••••••••{wallet.id.slice(-4)}</span>
+              Wallet ID: <span className="font-mono text-slate-700 font-medium">••••••••{walletId.slice(-4)}</span>
             </p>
           </div>
 
@@ -134,13 +197,13 @@ export const DashboardPage: React.FC = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transactions.slice(0, 5).map((txn) => {
-              const isCredit = txn.type === 'TOPUP' || txn.recipientName === 'Arbaz Sayyad';
+            {transactions.slice(0, 6).map((txn) => {
+              const isCredit = txn.type === 'TOPUP' || txn.recipientName === 'John Doe';
               return (
                 <TableRow
                   key={txn.id}
                   isClickable
-                  onClick={() => navigate(ROUTES.TRANSACTION_DETAIL(txn.id))}
+                  onClick={() => navigate(ROUTES.TRANSACTIONS)}
                 >
                   <TableCell className="text-xs text-slate-500 whitespace-nowrap">
                     {formatDateTime(txn.createdAt)}

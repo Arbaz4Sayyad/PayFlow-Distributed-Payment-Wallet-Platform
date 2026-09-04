@@ -11,6 +11,17 @@ spring:
       password: ${REDIS_PASSWORD:}
   cloud:
     gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
       routes:
         - id: user-service-route
           uri: ${USER_SERVICE_URI:http://localhost:8081}

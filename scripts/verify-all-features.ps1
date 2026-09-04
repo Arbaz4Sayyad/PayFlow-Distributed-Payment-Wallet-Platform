@@ -305,9 +305,10 @@ $fraudEvalSafe = Invoke-RestMethod -Uri "$GATEWAY/api/v1/fraud/evaluate" -Method
 Print-Pass "Safe Transaction Evaluation: Decision = $($fraudEvalSafe.data.decision), Risk Score = $($fraudEvalSafe.data.riskScore), Summary = $($fraudEvalSafe.data.summary)"
 
 # 6.2 Add Suspicious IP to Blacklist
+$testBlacklistIp = "198.51.100." + (Get-Random -Minimum 1 -Maximum 254)
 $blacklistRes = Invoke-RestMethod -Uri "$GATEWAY/api/v1/fraud/blacklist" -Method Post -ContentType "application/json" -Body (@{
     targetType  = "IP"
-    targetValue = "198.51.100.99"
+    targetValue = $testBlacklistIp
     reason      = "Known malicious botnet proxy"
 } | ConvertTo-Json)
 Print-Pass "Added to Fraud Blacklist: Entity = $($blacklistRes.data.targetValue), Type = $($blacklistRes.data.targetType)"
@@ -320,7 +321,7 @@ $fraudEvalBlocked = Invoke-RestMethod -Uri "$GATEWAY/api/v1/fraud/evaluate" -Met
     walletId      = $aliceWalletId
     amount        = 500.00
     currency      = "INR"
-    ipAddress     = "198.51.100.99"
+    ipAddress     = $testBlacklistIp
     deviceId      = "DEV-ALICE-SECURE-001"
 } | ConvertTo-Json)
 Print-Pass "Blacklist Evaluation: Decision = $($fraudEvalBlocked.data.decision), Risk Score = $($fraudEvalBlocked.data.riskScore), Triggered Rules = $($fraudEvalBlocked.data.triggeredRules -join ', ')"

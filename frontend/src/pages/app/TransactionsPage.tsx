@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Search,
   Download,
   ChevronLeft,
   ChevronRight,
+  RefreshCw,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -12,13 +12,14 @@ import { Select } from '../../components/ui/Select';
 import { MoneyAmount } from '../../components/ui/MoneyAmount';
 import { StatusIndicator } from '../../components/ui/StatusIndicator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
-import { ROUTES } from '../../constants/routes';
-import { MOCK_TRANSACTIONS } from '../../mocks/mockData';
+import { apiClient } from '../../api/client';
+import { DEMO_CONFIG } from '../../api/demo';
 import { formatDateTime } from '../../utils/dates';
 import { useDebounce } from '../../hooks/useDebounce';
+import { Transaction } from '../../types';
 
 export const TransactionsPage: React.FC = () => {
-  const navigate = useNavigate();
+  const walletId = DEMO_CONFIG.primaryUser.walletId;
 
   // Filter States
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,11 +27,56 @@ export const TransactionsPage: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const itemsPerPage = 8;
+
+  const fetchTransactions = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const ledgerRes = await apiClient.get(`/v1/ledger/wallets/${walletId}`);
+      if (ledgerRes.data?.data?.content) {
+        const postings = ledgerRes.data.data.content;
+        const txns: Transaction[] = postings.map((line: any, idx: number) => ({
+          id: line.id || `line-${idx}`,
+          transactionNumber: `TXN-${String(10000 + idx).padStart(5, '0')}`,
+          senderWalletId: line.entryType === 'DEBIT' ? walletId : 'EXT-CLEARING',
+          recipientWalletId: line.entryType === 'CREDIT' ? walletId : 'EXT-VENDOR',
+          senderName: line.entryType === 'CREDIT' ? 'NetBanking / Payroll' : 'John Doe',
+          recipientName: line.entryType === 'DEBIT' ? 'Merchant / Vendor' : 'John Doe',
+          amount: line.amountMinor / 100,
+          amountMinor: line.amountMinor,
+          currency: 'INR' as const,
+          type: line.entryType === 'CREDIT' ? 'TOPUP' : 'TRANSFER',
+          status: 'COMPLETED' as const,
+          description: line.description || (line.entryType === 'CREDIT' ? 'Credit Posting' : 'Payment Debit'),
+          createdAt: line.createdAt || new Date().toISOString(),
+        }));
+        setTransactions(txns);
+      }
+    } catch {
+      // fallback
+    } finally {
+      setIsLoading(false);
+    }
+  }, [walletId]);
+
+  useEffect(() => {
+    fetchTransactions();
+
+    const handleUpdate = () => fetchTransactions();
+    window.addEventListener('payflow:demo-reset', handleUpdate);
+    window.addEventListener('payflow:wallet-updated', handleUpdate);
+
+    return () => {
+      window.removeEventListener('payflow:demo-reset', handleUpdate);
+      window.removeEventListener('payflow:wallet-updated', handleUpdate);
+    };
+  }, [fetchTransactions]);
 
   // Filter logic
   const filteredTransactions = useMemo(() => {
-    return MOCK_TRANSACTIONS.filter((txn) => {
+    return transactions.filter((txn) => {
       // Search match
       const matchSearch =
         debouncedSearch === '' ||
@@ -47,7 +93,7 @@ export const TransactionsPage: React.FC = () => {
 
       return matchSearch && matchType && matchStatus;
     });
-  }, [debouncedSearch, typeFilter, statusFilter]);
+  }, [transactions, debouncedSearch, typeFilter, statusFilter]);
 
   const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage) || 1;
   const paginatedData = filteredTransactions.slice(
@@ -66,6 +112,15 @@ export const TransactionsPage: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={fetchTransactions}
+            loading={isLoading}
+            leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />}
+          >
+            Refresh
+          </Button>
           <Button
             variant="secondary"
             size="sm"
@@ -103,7 +158,6 @@ export const TransactionsPage: React.FC = () => {
                 { value: 'TRANSFER', label: 'Transfers' },
                 { value: 'TOPUP', label: 'Deposits / Top-Ups' },
                 { value: 'WITHDRAW', label: 'Withdrawals' },
-                { value: 'MERCHANT_PAYMENT', label: 'Merchant Payments' },
               ]}
             />
           </div>
@@ -120,7 +174,6 @@ export const TransactionsPage: React.FC = () => {
                 { value: 'COMPLETED', label: 'Completed' },
                 { value: 'PROCESSING', label: 'Processing' },
                 { value: 'FAILED', label: 'Failed' },
-                { value: 'REFUNDED', label: 'Refunded' },
               ]}
             />
           </div>
@@ -132,37 +185,42 @@ export const TransactionsPage: React.FC = () => {
         <TableHeader>
           <TableRow>
             <TableHead>Date & Time</TableHead>
-            <TableHead>Counterparty / Description</TableHead>
+            <TableHead>Description / Party</TableHead>
             <TableHead>Type</TableHead>
             <TableHead className="text-right">Amount</TableHead>
             <TableHead className="text-center">Status</TableHead>
-            <TableHead className="text-right">Transaction Reference</TableHead>
+            <TableHead className="text-right">Reference ID</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {paginatedData.length > 0 ? (
+          {paginatedData.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6} className="text-center py-8 text-xs text-slate-500">
+                No matching double-entry ledger transactions found.
+              </TableCell>
+            </TableRow>
+          ) : (
             paginatedData.map((txn) => {
-              const isCredit = txn.type === 'TOPUP' || txn.recipientName === 'Arbaz Sayyad';
+              const isCredit = txn.type === 'TOPUP' || txn.recipientName === 'John Doe';
               return (
                 <TableRow
                   key={txn.id}
                   isClickable
-                  onClick={() => navigate(ROUTES.TRANSACTION_DETAIL(txn.id))}
                 >
                   <TableCell className="text-xs text-slate-500 whitespace-nowrap">
                     {formatDateTime(txn.createdAt)}
                   </TableCell>
                   <TableCell>
                     <div className="font-medium text-slate-900 text-xs">
-                      {txn.recipientName || txn.senderName || 'External Transaction'}
+                      {txn.recipientName || txn.senderName || 'External Gateway'}
                     </div>
                     {txn.description && (
-                      <div className="text-[11px] text-slate-600 truncate max-w-sm">{txn.description}</div>
+                      <div className="text-[11px] text-slate-600 truncate max-w-xs">{txn.description}</div>
                     )}
                   </TableCell>
                   <TableCell>
                     <span className="text-xs text-slate-600 font-mono capitalize">
-                      {txn.type.replace('_', ' ').toLowerCase()}
+                      {txn.type.toLowerCase()}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
@@ -177,65 +235,46 @@ export const TransactionsPage: React.FC = () => {
                   <TableCell className="text-center">
                     <StatusIndicator status={txn.status} size="sm" />
                   </TableCell>
-                  <TableCell className="text-right font-mono text-[11px] text-slate-600 font-medium">
+                  <TableCell className="text-right font-mono text-[11px] text-slate-600">
                     {txn.transactionNumber}
                   </TableCell>
                 </TableRow>
               );
             })
-          ) : (
-            <TableRow>
-              <TableCell colSpan={6} className="text-center py-12 text-slate-500">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-slate-700">No transactions found</p>
-                  <p className="text-xs text-slate-400">
-                    Try adjusting your search terms or filter selection.
-                  </p>
-                </div>
-              </TableCell>
-            </TableRow>
           )}
         </TableBody>
       </Table>
 
       {/* Pagination Footer */}
-      <div className="flex items-center justify-between px-1 text-xs text-slate-500">
-        <div>
-          Showing{' '}
-          <span className="font-medium text-slate-900">
-            {filteredTransactions.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}
-          </span>{' '}
-          to{' '}
-          <span className="font-medium text-slate-900">
-            {Math.min(currentPage * itemsPerPage, filteredTransactions.length)}
-          </span>{' '}
-          of <span className="font-medium text-slate-900">{filteredTransactions.length}</span> records
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-xs text-slate-500 px-1 pt-2">
+          <div>
+            Showing {(currentPage - 1) * itemsPerPage + 1} to{' '}
+            {Math.min(currentPage * itemsPerPage, filteredTransactions.length)} of {filteredTransactions.length} entries
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+            </Button>
+            <span className="px-2 font-medium text-slate-700">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            >
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Button>
+          </div>
         </div>
-
-        <div className="flex items-center gap-1">
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-            leftIcon={<ChevronLeft className="w-3.5 h-3.5" />}
-          >
-            Prev
-          </Button>
-          <span className="px-2 font-mono text-slate-700">
-            {currentPage} / {totalPages}
-          </span>
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-            rightIcon={<ChevronRight className="w-3.5 h-3.5" />}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

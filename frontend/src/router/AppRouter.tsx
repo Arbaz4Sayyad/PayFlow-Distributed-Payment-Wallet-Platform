@@ -5,6 +5,9 @@ import { useAuth } from '../hooks/useAuth';
 import { AppLayout } from '../components/layout/AppLayout';
 import { AdminLayout } from '../components/layout/AdminLayout';
 
+// Landing Page
+import { LandingPage } from '../pages/landing/LandingPage';
+
 // Auth Pages
 import { LoginPage } from '../pages/auth/LoginPage';
 import { RegisterPage } from '../pages/auth/RegisterPage';
@@ -73,8 +76,8 @@ const RequireAdmin: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 export const AppRouter: React.FC = () => {
   return (
     <Routes>
-      {/* Root redirect */}
-      <Route path="/" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
+      {/* Public Landing Page */}
+      <Route path="/" element={<LandingPage />} />
 
       {/* Auth Public Routes */}
       <Route path={ROUTES.LOGIN} element={<LoginPage />} />

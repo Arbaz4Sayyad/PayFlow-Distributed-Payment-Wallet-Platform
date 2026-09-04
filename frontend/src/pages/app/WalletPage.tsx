@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Plus,
   ArrowDownLeft,
   RefreshCw,
-  Building,
-  CheckCircle2,
 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -15,16 +13,21 @@ import { StatusIndicator } from '../../components/ui/StatusIndicator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
 import { useToast } from '../../components/ui/Toast';
 import { useIdempotency } from '../../hooks/useIdempotency';
-import { MOCK_WALLET, MOCK_TRANSACTIONS } from '../../mocks/mockData';
+import { getWalletBalance, topUpWallet, withdrawWallet } from '../../api/wallet';
+import { apiClient } from '../../api/client';
+import { DEMO_CONFIG } from '../../api/demo';
 import { formatDateTime } from '../../utils/dates';
 import { toMinorUnits } from '../../utils/currency';
+import { Transaction } from '../../types';
 
 export const WalletPage: React.FC = () => {
   const { success, error: toastError } = useToast();
   const { getIdempotencyKey, resetIdempotencyKey } = useIdempotency();
 
-  const [wallet, setWallet] = useState(MOCK_WALLET);
-  const [transactions, setTransactions] = useState(MOCK_TRANSACTIONS);
+  const walletId = DEMO_CONFIG.primaryUser.walletId;
+  const [balance, setBalance] = useState<number>(DEMO_CONFIG.primaryUser.initialBalance);
+  const [currency, setCurrency] = useState<string>('INR');
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Modals
@@ -33,13 +36,67 @@ export const WalletPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form states
-  const [addAmount, setAddAmount] = useState('5000.00');
+  const [addAmount, setAddAmount] = useState('');
   const [addMethod, setAddMethod] = useState('BANK_TRANSFER');
-  const [withdrawAmount, setWithdrawAmount] = useState('2000.00');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawBank, setWithdrawBank] = useState('HDFC Bank •••• 4832');
 
-  const handleRefresh = () => {
+  const fetchLiveWallet = useCallback(async () => {
+    try {
+      const balRes = await getWalletBalance(walletId);
+      if (balRes) {
+        setBalance(balRes.balance);
+        setCurrency(balRes.currency || 'INR');
+      }
+    } catch {
+      // fallback
+    }
+
+    try {
+      const ledgerRes = await apiClient.get(`/v1/ledger/wallets/${walletId}`);
+      if (ledgerRes.data?.data?.content) {
+        const postings = ledgerRes.data.data.content;
+        const txns: Transaction[] = postings.map((line: any, idx: number) => ({
+          id: line.id || `line-${idx}`,
+          transactionNumber: `TXN-${String(10000 + idx).padStart(5, '0')}`,
+          senderWalletId: line.entryType === 'DEBIT' ? walletId : 'EXT-CLEARING',
+          recipientWalletId: line.entryType === 'CREDIT' ? walletId : 'EXT-VENDOR',
+          senderName: line.entryType === 'CREDIT' ? 'NetBanking / Payroll' : 'John Doe',
+          recipientName: line.entryType === 'DEBIT' ? 'Merchant / Vendor' : 'John Doe',
+          amount: line.amountMinor / 100,
+          amountMinor: line.amountMinor,
+          currency: 'INR' as const,
+          type: line.entryType === 'CREDIT' ? 'TOPUP' : 'TRANSFER',
+          status: 'COMPLETED' as const,
+          description: line.description || (line.entryType === 'CREDIT' ? 'Credit Posting' : 'Payment Debit'),
+          createdAt: line.createdAt || new Date().toISOString(),
+        }));
+        setTransactions(txns);
+      }
+    } catch {
+      // ignore
+    }
+  }, [walletId]);
+
+  useEffect(() => {
+    fetchLiveWallet();
+
+    const handleUpdate = () => {
+      fetchLiveWallet();
+    };
+
+    window.addEventListener('payflow:demo-reset', handleUpdate);
+    window.addEventListener('payflow:wallet-updated', handleUpdate);
+
+    return () => {
+      window.removeEventListener('payflow:demo-reset', handleUpdate);
+      window.removeEventListener('payflow:wallet-updated', handleUpdate);
+    };
+  }, [fetchLiveWallet]);
+
+  const handleRefresh = async () => {
     setIsRefreshing(true);
+    await fetchLiveWallet();
     setTimeout(() => {
       setIsRefreshing(false);
     }, 400);
@@ -54,99 +111,91 @@ export const WalletPage: React.FC = () => {
     }
 
     setIsSubmitting(true);
-    getIdempotencyKey();
+    const idempKey = getIdempotencyKey();
 
-    setTimeout(() => {
-      const addedMinor = toMinorUnits(num);
-      const newBalanceMinor = wallet.balanceMinor + addedMinor;
-      setWallet({
-        ...wallet,
-        balanceMinor: newBalanceMinor,
-        balance: newBalanceMinor / 100,
-      });
+    try {
+      const res = await topUpWallet(
+        walletId,
+        {
+          amount: num,
+          currency: 'INR' as any,
+          referenceId: `TOPUP-${Date.now()}`,
+          description: `Wallet top-up via ${addMethod}`,
+        },
+        idempKey
+      );
 
-      const newTxn = {
-        id: 'txn_' + Math.random().toString(36).substring(2, 9),
-        transactionNumber: 'TXN-' + Math.floor(10000 + Math.random() * 90000),
-        senderWalletId: 'SYSTEM_TOPUP_GATEWAY',
-        recipientWalletId: wallet.id,
-        senderName: 'NetBanking Deposit',
-        recipientName: 'Arbaz Sayyad',
-        amount: num,
-        amountMinor: addedMinor,
-        currency: wallet.currency,
-        type: 'TOPUP' as const,
-        status: 'COMPLETED' as const,
-        description: 'Wallet top-up via ' + addMethod,
-        createdAt: new Date().toISOString(),
-      };
-
-      setTransactions([newTxn, ...transactions]);
+      setBalance(res.balance);
       setIsSubmitting(false);
       setIsAddOpen(false);
       resetIdempotencyKey();
-      success('Funds Deposited', `Added ₹${num.toFixed(2)} to your wallet.`);
-    }, 600);
+      success('Funds Deposited', `Added ₹${num.toFixed(2)} to your wallet. New Balance: ₹${res.balance.toFixed(2)}`);
+
+      window.dispatchEvent(new CustomEvent('payflow:wallet-updated'));
+      await fetchLiveWallet();
+    } catch (err: any) {
+      setIsSubmitting(false);
+      const msg = err.response?.data?.error?.message || err.message || 'Failed to top up wallet';
+      toastError('Top-up Failed', msg);
+    }
   };
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
     const num = parseFloat(withdrawAmount);
     const requestedMinor = toMinorUnits(num);
+    const currentBalanceMinor = Math.round(balance * 100);
 
     if (isNaN(num) || num <= 0) {
       toastError('Invalid Amount', 'Please enter an amount greater than 0.');
       return;
     }
 
-    if (requestedMinor > wallet.balanceMinor) {
+    if (requestedMinor > currentBalanceMinor) {
       toastError('Insufficient Balance', 'Withdrawal amount cannot exceed available balance.');
       return;
     }
 
     setIsSubmitting(true);
-    getIdempotencyKey();
+    const idempKey = getIdempotencyKey();
 
-    setTimeout(() => {
-      const newBalanceMinor = wallet.balanceMinor - requestedMinor;
-      setWallet({
-        ...wallet,
-        balanceMinor: newBalanceMinor,
-        balance: newBalanceMinor / 100,
-      });
+    try {
+      const res = await withdrawWallet(
+        walletId,
+        {
+          amount: num,
+          currency: 'INR' as any,
+          referenceId: `WITHDRAW-${Date.now()}`,
+          description: `Withdrawal to ${withdrawBank}`,
+        },
+        idempKey
+      );
 
-      const newTxn = {
-        id: 'txn_' + Math.random().toString(36).substring(2, 9),
-        transactionNumber: 'TXN-' + Math.floor(10000 + Math.random() * 90000),
-        senderWalletId: wallet.id,
-        recipientWalletId: 'BANK_ESCROW_OUT',
-        senderName: 'Arbaz Sayyad',
-        recipientName: withdrawBank,
-        amount: num,
-        amountMinor: requestedMinor,
-        currency: wallet.currency,
-        type: 'WITHDRAW' as const,
-        status: 'COMPLETED' as const,
-        description: 'Withdrawal to ' + withdrawBank,
-        createdAt: new Date().toISOString(),
-      };
-
-      setTransactions([newTxn, ...transactions]);
+      setBalance(res.balance);
       setIsSubmitting(false);
       setIsWithdrawOpen(false);
       resetIdempotencyKey();
-      success('Withdrawal Initiated', `₹${num.toFixed(2)} transferred to your bank.`);
-    }, 600);
+      success('Withdrawal Processed', `Withdrew ₹${num.toFixed(2)} to ${withdrawBank}. New Balance: ₹${res.balance.toFixed(2)}`);
+
+      window.dispatchEvent(new CustomEvent('payflow:wallet-updated'));
+      await fetchLiveWallet();
+    } catch (err: any) {
+      setIsSubmitting(false);
+      const msg = err.response?.data?.error?.message || err.message || 'Failed to withdraw funds';
+      toastError('Withdrawal Failed', msg);
+    }
   };
+
+  const balanceMinor = Math.round(balance * 100);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-200 pb-4">
         <div>
-          <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Wallet & Balances</h1>
+          <h1 className="text-xl font-semibold text-slate-900 tracking-tight">Wallet Management</h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Manage your primary treasury balance and settlement methods.
+            Real-time balance, stored liquidity, and atomic debit/credit operations.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -157,101 +206,89 @@ export const WalletPage: React.FC = () => {
             loading={isRefreshing}
             leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />}
           >
-            Refresh
+            Refresh Balance
           </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setIsWithdrawOpen(true)}
-            leftIcon={<ArrowDownLeft className="w-3.5 h-3.5" />}
-          >
-            Withdraw
-          </Button>
+        </div>
+      </div>
+
+      {/* Hero Wallet Card */}
+      <div className="bg-white border border-slate-200 rounded-lg p-6 shadow-subtle flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+              Primary Liquid Balance
+            </span>
+            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Active
+            </span>
+          </div>
+          <div className="flex items-baseline gap-3 pt-1">
+            <MoneyAmount
+              amountMinor={balanceMinor}
+              currency={currency as any}
+              size="kpi"
+            />
+            <span className="text-xs font-semibold text-slate-400">{currency}</span>
+          </div>
+          <p className="text-xs text-slate-500 pt-0.5">
+            Wallet UUID: <span className="font-mono text-slate-700 font-medium">{walletId}</span>
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5">
           <Button
             variant="primary"
-            size="sm"
             onClick={() => setIsAddOpen(true)}
-            leftIcon={<Plus className="w-3.5 h-3.5" />}
+            leftIcon={<Plus className="w-4 h-4" />}
           >
             Add Money
           </Button>
+          <Button
+            variant="secondary"
+            onClick={() => setIsWithdrawOpen(true)}
+            leftIcon={<ArrowDownLeft className="w-4 h-4" />}
+          >
+            Withdraw Funds
+          </Button>
         </div>
       </div>
 
-      {/* Main Wallet Info Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-subtle md:col-span-2 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-              Available Balance
-            </span>
-            <StatusIndicator status={wallet.status} size="sm" />
-          </div>
-          <div className="flex items-baseline gap-2">
-            <MoneyAmount
-              amountMinor={wallet.balanceMinor}
-              currency={wallet.currency}
-              size="kpi"
-            />
-            <span className="text-sm font-semibold text-slate-400">{wallet.currency}</span>
-          </div>
-          <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-500 gap-2">
-            <div>
-              Wallet ID: <span className="font-mono text-slate-800 font-medium">••••••••{wallet.id.slice(-4)}</span>
-            </div>
-            <div>
-              Created: <span className="text-slate-800 font-medium">12 Aug 2026</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Linked Settlement Method */}
-        <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-subtle flex flex-col justify-between space-y-3">
-          <div>
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-              Primary Settlement Account
-            </span>
-            <div className="flex items-center gap-3 mt-2">
-              <div className="p-2 bg-slate-100 rounded-md text-slate-700">
-                <Building className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-900">HDFC Bank</p>
-                <p className="text-[11px] font-mono text-slate-500">•••• •••• 4832</p>
-              </div>
-            </div>
-          </div>
-          <div className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Instant IMPS / NEFT Enabled</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Balance Activity Table */}
+      {/* Ledger History */}
       <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-slate-900">Balance Activity</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-slate-900">Wallet Movement History</h2>
+          <span className="text-xs text-slate-500 font-mono">
+            {transactions.length} verified postings
+          </span>
+        </div>
+
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Activity Details</TableHead>
+              <TableHead>Date & Time</TableHead>
+              <TableHead>Description / Reference</TableHead>
               <TableHead>Type</TableHead>
               <TableHead className="text-right">Amount</TableHead>
               <TableHead className="text-center">Status</TableHead>
+              <TableHead className="text-right">Reference ID</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {transactions.map((txn) => {
-              const isCredit = txn.type === 'TOPUP' || txn.recipientName === 'Arbaz Sayyad';
+              const isCredit = txn.type === 'TOPUP' || txn.recipientName === 'John Doe';
               return (
                 <TableRow key={txn.id}>
                   <TableCell className="text-xs text-slate-500 whitespace-nowrap">
                     {formatDateTime(txn.createdAt)}
                   </TableCell>
                   <TableCell>
-                    <div className="font-medium text-slate-900 text-xs">{txn.description || txn.type}</div>
-                    <div className="text-[11px] font-mono text-slate-400">{txn.transactionNumber}</div>
+                    <div className="font-medium text-slate-900 text-xs">
+                      {txn.recipientName || txn.senderName || 'External Gateway'}
+                    </div>
+                    {txn.description && (
+                      <div className="text-[11px] text-slate-600 truncate max-w-xs">{txn.description}</div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <span className="text-xs text-slate-600 font-mono capitalize">
@@ -270,6 +307,9 @@ export const WalletPage: React.FC = () => {
                   <TableCell className="text-center">
                     <StatusIndicator status={txn.status} size="sm" />
                   </TableCell>
+                  <TableCell className="text-right font-mono text-[11px] text-slate-600">
+                    {txn.transactionNumber}
+                  </TableCell>
                 </TableRow>
               );
             })}
@@ -277,116 +317,142 @@ export const WalletPage: React.FC = () => {
         </Table>
       </div>
 
-      {/* Add Money Modal Dialog */}
+      {/* Add Money Modal */}
       <Dialog
         isOpen={isAddOpen}
-        onClose={() => !isSubmitting && setIsAddOpen(false)}
-        title="Add Money to Wallet"
-        description="Top up your available wallet balance via instant bank payment."
-        footer={
-          <>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={isSubmitting}
-              onClick={() => setIsAddOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              loading={isSubmitting}
-              disabled={isSubmitting}
-              onClick={handleAddMoney}
-            >
-              Confirm Deposit
-            </Button>
-          </>
-        }
+        onClose={() => setIsAddOpen(false)}
+        title="Top-up Wallet Liquidity"
+        description="Simulate adding funds to your primary wallet via simulated NetBanking or UPI rail."
       >
-        <form onSubmit={handleAddMoney} className="space-y-4">
+        <form onSubmit={handleAddMoney} className="space-y-4 pt-2">
           <Input
             label="Deposit Amount (INR)"
             type="number"
             step="0.01"
             min="1"
-            required
             value={addAmount}
             onChange={(e) => setAddAmount(e.target.value)}
-            prefix={<span className="text-slate-500 font-medium">₹</span>}
-            description="Minimum deposit: ₹1.00"
+            prefix={<span className="text-xs font-semibold text-slate-400">₹</span>}
+            required
+            autoFocus
           />
 
           <Select
-            label="Payment Method"
+            label="Payment Source"
             value={addMethod}
             onChange={(e) => setAddMethod(e.target.value)}
             options={[
-              { value: 'BANK_TRANSFER', label: 'Direct NetBanking (Instant)' },
-              { value: 'UPI', label: 'Unified Payments Interface (UPI)' },
-              { value: 'DEBIT_CARD', label: 'Debit Card (Visa/Mastercard)' },
+              { value: 'BANK_TRANSFER', label: 'Instant UPI / NetBanking (Free)' },
+              { value: 'DEBIT_CARD', label: 'Corporate Debit Card' },
+              { value: 'WIRE_TRANSFER', label: 'RTGS / IMPS Clearing' },
             ]}
           />
-        </form>
-      </Dialog>
 
-      {/* Withdraw Modal Dialog */}
-      <Dialog
-        isOpen={isWithdrawOpen}
-        onClose={() => !isSubmitting && setIsWithdrawOpen(false)}
-        title="Withdraw Funds"
-        description="Transfer funds from your PayFlow wallet to your registered bank account."
-        footer={
-          <>
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-md text-xs text-slate-600 space-y-1">
+            <div className="flex justify-between font-medium">
+              <span>Current Balance:</span>
+              <span>₹{balance.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-emerald-700 font-medium">
+              <span>Added Liquidity:</span>
+              <span>+₹{(parseFloat(addAmount) || 0).toFixed(2)}</span>
+            </div>
+            <div className="border-t border-slate-200 pt-1 flex justify-between font-bold text-slate-900">
+              <span>Expected Balance:</span>
+              <span>₹{(balance + (parseFloat(addAmount) || 0)).toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
             <Button
+              type="button"
               variant="secondary"
               size="sm"
+              onClick={() => setIsAddOpen(false)}
               disabled={isSubmitting}
-              onClick={() => setIsWithdrawOpen(false)}
             >
               Cancel
             </Button>
             <Button
+              type="submit"
               variant="primary"
               size="sm"
               loading={isSubmitting}
-              disabled={isSubmitting}
-              onClick={handleWithdraw}
+              className="bg-emerald-600 hover:bg-emerald-700"
             >
-              Confirm Withdrawal
+              Confirm Deposit
             </Button>
-          </>
-        }
-      >
-        <form onSubmit={handleWithdraw} className="space-y-4">
-          <div className="bg-slate-50 p-3 rounded border border-slate-200 text-xs flex justify-between items-center">
-            <span className="text-slate-500">Available to withdraw:</span>
-            <span className="font-semibold text-slate-900">
-              <MoneyAmount amountMinor={wallet.balanceMinor} currency={wallet.currency} size="sm" />
-            </span>
           </div>
+        </form>
+      </Dialog>
 
+      {/* Withdraw Modal */}
+      <Dialog
+        isOpen={isWithdrawOpen}
+        onClose={() => setIsWithdrawOpen(false)}
+        title="Withdraw Funds to Bank"
+        description="Execute an atomic debit to disburse wallet funds directly into your verified bank account."
+      >
+        <form onSubmit={handleWithdraw} className="space-y-4 pt-2">
           <Input
             label="Withdrawal Amount (INR)"
             type="number"
             step="0.01"
             min="1"
-            required
+            max={balance}
             value={withdrawAmount}
             onChange={(e) => setWithdrawAmount(e.target.value)}
-            prefix={<span className="text-slate-500 font-medium">₹</span>}
+            prefix={<span className="text-xs font-semibold text-slate-400">₹</span>}
+            required
+            autoFocus
           />
 
           <Select
-            label="Destination Account"
+            label="Payout Destination Account"
             value={withdrawBank}
             onChange={(e) => setWithdrawBank(e.target.value)}
             options={[
-              { value: 'HDFC Bank •••• 4832', label: 'HDFC Bank •••• 4832 (Primary)' },
-              { value: 'ICICI Bank •••• 9912', label: 'ICICI Bank •••• 9912' },
+              { value: 'HDFC Bank •••• 4832', label: 'HDFC Bank (Current A/C •••• 4832)' },
+              { value: 'ICICI Bank •••• 9914', label: 'ICICI Bank (Savings •••• 9914)' },
+              { value: 'State Bank •••• 1120', label: 'SBI Corporate Clearing (•••• 1120)' },
             ]}
           />
+
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-md text-xs text-slate-600 space-y-1">
+            <div className="flex justify-between font-medium">
+              <span>Current Balance:</span>
+              <span>₹{balance.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-red-600 font-medium">
+              <span>Withdrawal Amount:</span>
+              <span>-₹{(parseFloat(withdrawAmount) || 0).toFixed(2)}</span>
+            </div>
+            <div className="border-t border-slate-200 pt-1 flex justify-between font-bold text-slate-900">
+              <span>Remaining Balance:</span>
+              <span>₹{Math.max(0, balance - (parseFloat(withdrawAmount) || 0)).toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsWithdrawOpen(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              loading={isSubmitting}
+              className="bg-slate-900 hover:bg-slate-800"
+            >
+              Execute Withdrawal
+            </Button>
+          </div>
         </form>
       </Dialog>
     </div>

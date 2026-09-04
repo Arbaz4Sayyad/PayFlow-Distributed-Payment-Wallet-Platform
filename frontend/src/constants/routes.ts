@@ -1,4 +1,7 @@
 export const ROUTES = {
+  // Public Landing
+  LANDING: '/',
+
   // Auth
   LOGIN: '/auth/login',
   REGISTER: '/auth/register',

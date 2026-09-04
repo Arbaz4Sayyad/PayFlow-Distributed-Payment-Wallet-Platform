@@ -6,6 +6,8 @@ import { Select } from '../../components/ui/Select';
 import { Dialog } from '../../components/ui/Dialog';
 import { useToast } from '../../components/ui/Toast';
 import { useIdempotency } from '../../hooks/useIdempotency';
+import { DEMO_CONFIG } from '../../api/demo';
+import { withdrawWallet } from '../../api/wallet';
 
 export const PaymentsPage: React.FC = () => {
   const { success, error: toastError } = useToast();
@@ -13,8 +15,8 @@ export const PaymentsPage: React.FC = () => {
 
   // Merchant payment state
   const [merchant, setMerchant] = useState('Amazon Marketplace');
-  const [amount, setAmount] = useState('2450.00');
-  const [orderId, setOrderId] = useState('ORD-AMZN-88319');
+  const [amount, setAmount] = useState('');
+  const [orderId, setOrderId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -22,22 +24,47 @@ export const PaymentsPage: React.FC = () => {
     e.preventDefault();
     const num = parseFloat(amount);
     if (isNaN(num) || num <= 0) {
-      toastError('Invalid Amount', 'Please enter a valid amount.');
+      toastError('Invalid Amount', 'Please enter a valid payment amount.');
+      return;
+    }
+    if (!orderId.trim()) {
+      toastError('Order Reference Required', 'Please provide a valid Merchant Order ID or Invoice Reference.');
       return;
     }
     setIsModalOpen(true);
   };
 
-  const handleConfirmPayment = () => {
+  const handleConfirmPayment = async () => {
     setIsSubmitting(true);
-    getIdempotencyKey();
+    const idempKey = getIdempotencyKey();
+    const num = parseFloat(amount);
+    const walletId = DEMO_CONFIG.primaryUser.walletId;
 
-    setTimeout(() => {
+    try {
+      await withdrawWallet(
+        walletId,
+        {
+          amount: num,
+          currency: 'INR' as any,
+          referenceId: orderId || `ORD-${Date.now()}`,
+          description: `Merchant checkout to ${merchant}`,
+        },
+        idempKey
+      );
+
       setIsSubmitting(false);
       setIsModalOpen(false);
       resetIdempotencyKey();
-      success('Payment Successful', `Paid ₹${amount} to ${merchant}. Order: ${orderId}`);
-    }, 700);
+      success('Payment Successful', `Paid ₹${num.toFixed(2)} to ${merchant}. Reference: ${orderId}`);
+
+      setAmount('');
+      setOrderId('');
+      window.dispatchEvent(new CustomEvent('payflow:wallet-updated'));
+    } catch (err: any) {
+      setIsSubmitting(false);
+      const msg = err.response?.data?.error?.message || err.message || 'Payment failed';
+      toastError('Payment Failed', msg);
+    }
   };
 
   return (
@@ -56,10 +83,22 @@ export const PaymentsPage: React.FC = () => {
             value={merchant}
             onChange={(e) => setMerchant(e.target.value)}
             options={[
-              { value: 'Amazon Marketplace', label: 'Amazon Marketplace (E-Commerce)' },
-              { value: 'Zepto Express', label: 'Zepto Express (Quick Commerce)' },
-              { value: 'Uber Technologies', label: 'Uber Rides & Mobility' },
+              { value: 'Amazon Marketplace', label: 'Amazon Marketplace (E-Commerce & Retail)' },
+              { value: 'Flipkart Internet', label: 'Flipkart Internet (Online Marketplace)' },
+              { value: 'Zepto Express', label: 'Zepto Express (Quick Commerce & Groceries)' },
+              { value: 'Blinkit Commerce', label: 'Blinkit Commerce (Instant Grocery Delivery)' },
+              { value: 'Swiggy Food & Instamart', label: 'Swiggy Food & Instamart' },
               { value: 'Zomato Food Delivery', label: 'Zomato Food Delivery' },
+              { value: 'Uber Technologies', label: 'Uber Rides & Mobility' },
+              { value: 'Ola Cabs', label: 'Ola Cabs (Transportation)' },
+              { value: 'Netflix India', label: 'Netflix India (Digital Subscription)' },
+              { value: 'Spotify Premium', label: 'Spotify Premium (Digital Media)' },
+              { value: 'Apple Services', label: 'Apple Services (App Store & iCloud)' },
+              { value: 'Google Cloud Platform', label: 'Google Cloud Platform (Infrastructure)' },
+              { value: 'AWS Cloud Services', label: 'AWS Cloud Services (Enterprise Cloud)' },
+              { value: 'Microsoft Azure', label: 'Microsoft Azure (Cloud Services)' },
+              { value: 'Tata Power Utility', label: 'Tata Power / Electricity Bill' },
+              { value: 'Airtel Broadband', label: 'Airtel / Jio Fiber (Broadband & Telecom)' },
             ]}
           />
 
@@ -69,7 +108,7 @@ export const PaymentsPage: React.FC = () => {
             required
             value={orderId}
             onChange={(e) => setOrderId(e.target.value)}
-            placeholder="ORD-12345"
+            placeholder="e.g. ORD-98214"
           />
 
           <Input
@@ -80,13 +119,14 @@ export const PaymentsPage: React.FC = () => {
             required
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.00"
             prefix={<span className="text-slate-500 font-medium">₹</span>}
           />
 
           <Button
             type="submit"
             variant="primary"
-            className="w-full mt-2"
+            className="w-full mt-2 bg-slate-900 hover:bg-slate-800 text-white font-medium"
             rightIcon={<ShoppingCart className="w-4 h-4" />}
           >
             Review & Authorize Payment
@@ -116,6 +156,7 @@ export const PaymentsPage: React.FC = () => {
               loading={isSubmitting}
               disabled={isSubmitting}
               onClick={handleConfirmPayment}
+              className="bg-slate-900 hover:bg-slate-800 text-white"
             >
               Authorize Payment
             </Button>
