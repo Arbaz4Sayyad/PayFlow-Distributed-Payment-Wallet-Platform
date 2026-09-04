@@ -7,3 +7,248 @@ services:
     staticPublishPath: ./docs/developer-portal
     pullRequestPreviewsEnabled: true
 
+  # API Gateway (Public Web Service)
+  - type: web
+    name: payflow-api-gateway
+    env: docker
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    dockerBuildArgs:
+      - key: SERVICE_NAME
+        value: api-gateway
+      - key: SERVICE_PORT
+        value: "8080"
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SERVER_PORT
+        value: "8080"
+      - key: USER_SERVICE_URI
+        value: http://payflow-user-service:8081
+      - key: WALLET_SERVICE_URI
+        value: http://payflow-wallet-service:8082
+      - key: PAYMENT_SERVICE_URI
+        value: http://payflow-payment-service:8083
+      - key: LEDGER_SERVICE_URI
+        value: http://payflow-ledger-service:8084
+      - key: MERCHANT_SERVICE_URI
+        value: http://payflow-merchant-service:8085
+      - key: FRAUD_SERVICE_URI
+        value: http://payflow-fraud-service:8086
+      - key: NOTIFICATION_SERVICE_URI
+        value: http://payflow-notification-service:8087
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        value: "6379"
+      - key: REDIS_PASSWORD
+        sync: false
+      - key: REDIS_SSL
+        value: "true"
+
+  # User Service
+  - type: web
+    name: payflow-user-service
+    env: docker
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    dockerBuildArgs:
+      - key: SERVICE_NAME
+        value: user-service
+      - key: SERVICE_PORT
+        value: "8081"
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SERVER_PORT
+        value: "8081"
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  # Wallet Service
+  - type: web
+    name: payflow-wallet-service
+    env: docker
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    dockerBuildArgs:
+      - key: SERVICE_NAME
+        value: wallet-service
+      - key: SERVICE_PORT
+        value: "8082"
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SERVER_PORT
+        value: "8082"
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        value: "6379"
+      - key: REDIS_PASSWORD
+        sync: false
+      - key: REDIS_SSL
+        value: "true"
+      - key: JWT_SECRET
+        sync: false
+
+  # Payment Service
+  - type: web
+    name: payflow-payment-service
+    env: docker
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    dockerBuildArgs:
+      - key: SERVICE_NAME
+        value: payment-service
+      - key: SERVICE_PORT
+        value: "8083"
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SERVER_PORT
+        value: "8083"
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        value: "6379"
+      - key: REDIS_PASSWORD
+        sync: false
+      - key: REDIS_SSL
+        value: "true"
+      - key: KAFKA_BOOTSTRAP_SERVERS
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  # Ledger Service
+  - type: web
+    name: payflow-ledger-service
+    env: docker
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    dockerBuildArgs:
+      - key: SERVICE_NAME
+        value: ledger-service
+      - key: SERVICE_PORT
+        value: "8084"
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SERVER_PORT
+        value: "8084"
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: KAFKA_BOOTSTRAP_SERVERS
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  # Merchant Service
+  - type: web
+    name: payflow-merchant-service
+    env: docker
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    dockerBuildArgs:
+      - key: SERVICE_NAME
+        value: merchant-service
+      - key: SERVICE_PORT
+        value: "8085"
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SERVER_PORT
+        value: "8085"
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  # Fraud Service
+  - type: web
+    name: payflow-fraud-service
+    env: docker
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    dockerBuildArgs:
+      - key: SERVICE_NAME
+        value: fraud-service
+      - key: SERVICE_PORT
+        value: "8086"
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SERVER_PORT
+        value: "8086"
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        value: "6379"
+      - key: REDIS_PASSWORD
+        sync: false
+      - key: REDIS_SSL
+        value: "true"
+      - key: KAFKA_BOOTSTRAP_SERVERS
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+
+  # Notification Service
+  - type: web
+    name: payflow-notification-service
+    env: docker
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    dockerBuildArgs:
+      - key: SERVICE_NAME
+        value: notification-service
+      - key: SERVICE_PORT
+        value: "8087"
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SERVER_PORT
+        value: "8087"
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: KAFKA_BOOTSTRAP_SERVERS
+        sync: false
+      - key: JWT_SECRET
+        sync: false
