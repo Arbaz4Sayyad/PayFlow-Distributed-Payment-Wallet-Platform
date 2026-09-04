@@ -2,7 +2,7 @@ services:
   # PayFlow Developer Portal & Interactive API Hub (Static Site)
   - type: web
     name: payflow-developer-portal
-    env: static
+    runtime: static
     buildCommand: ""
     staticPublishPath: ./docs/developer-portal
     pullRequestPreviewsEnabled: true
@@ -10,17 +10,16 @@ services:
   # API Gateway (Public Web Service)
   - type: web
     name: payflow-api-gateway
-    env: docker
+    runtime: docker
     dockerfilePath: Dockerfile
     dockerContext: .
-    dockerBuildArgs:
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
       - key: SERVICE_NAME
         value: api-gateway
       - key: SERVICE_PORT
         value: "8080"
-    plan: free
-    healthCheckPath: /actuator/health
-    envVars:
       - key: SERVER_PORT
         value: "8080"
       - key: USER_SERVICE_URI
@@ -49,17 +48,16 @@ services:
   # User Service
   - type: web
     name: payflow-user-service
-    env: docker
+    runtime: docker
     dockerfilePath: Dockerfile
     dockerContext: .
-    dockerBuildArgs:
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
       - key: SERVICE_NAME
         value: user-service
       - key: SERVICE_PORT
         value: "8081"
-    plan: free
-    healthCheckPath: /actuator/health
-    envVars:
       - key: SERVER_PORT
         value: "8081"
       - key: SPRING_DATASOURCE_URL
@@ -74,17 +72,16 @@ services:
   # Wallet Service
   - type: web
     name: payflow-wallet-service
-    env: docker
+    runtime: docker
     dockerfilePath: Dockerfile
     dockerContext: .
-    dockerBuildArgs:
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
       - key: SERVICE_NAME
         value: wallet-service
       - key: SERVICE_PORT
         value: "8082"
-    plan: free
-    healthCheckPath: /actuator/health
-    envVars:
       - key: SERVER_PORT
         value: "8082"
       - key: SPRING_DATASOURCE_URL
@@ -107,17 +104,16 @@ services:
   # Payment Service
   - type: web
     name: payflow-payment-service
-    env: docker
+    runtime: docker
     dockerfilePath: Dockerfile
     dockerContext: .
-    dockerBuildArgs:
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
       - key: SERVICE_NAME
         value: payment-service
       - key: SERVICE_PORT
         value: "8083"
-    plan: free
-    healthCheckPath: /actuator/health
-    envVars:
       - key: SERVER_PORT
         value: "8083"
       - key: SPRING_DATASOURCE_URL
@@ -142,17 +138,16 @@ services:
   # Ledger Service
   - type: web
     name: payflow-ledger-service
-    env: docker
+    runtime: docker
     dockerfilePath: Dockerfile
     dockerContext: .
-    dockerBuildArgs:
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
       - key: SERVICE_NAME
         value: ledger-service
       - key: SERVICE_PORT
         value: "8084"
-    plan: free
-    healthCheckPath: /actuator/health
-    envVars:
       - key: SERVER_PORT
         value: "8084"
       - key: SPRING_DATASOURCE_URL
@@ -169,17 +164,16 @@ services:
   # Merchant Service
   - type: web
     name: payflow-merchant-service
-    env: docker
+    runtime: docker
     dockerfilePath: Dockerfile
     dockerContext: .
-    dockerBuildArgs:
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
       - key: SERVICE_NAME
         value: merchant-service
       - key: SERVICE_PORT
         value: "8085"
-    plan: free
-    healthCheckPath: /actuator/health
-    envVars:
       - key: SERVER_PORT
         value: "8085"
       - key: SPRING_DATASOURCE_URL
@@ -194,17 +188,16 @@ services:
   # Fraud Service
   - type: web
     name: payflow-fraud-service
-    env: docker
+    runtime: docker
     dockerfilePath: Dockerfile
     dockerContext: .
-    dockerBuildArgs:
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
       - key: SERVICE_NAME
         value: fraud-service
       - key: SERVICE_PORT
         value: "8086"
-    plan: free
-    healthCheckPath: /actuator/health
-    envVars:
       - key: SERVER_PORT
         value: "8086"
       - key: SPRING_DATASOURCE_URL
@@ -229,17 +222,16 @@ services:
   # Notification Service
   - type: web
     name: payflow-notification-service
-    env: docker
+    runtime: docker
     dockerfilePath: Dockerfile
     dockerContext: .
-    dockerBuildArgs:
+    plan: free
+    healthCheckPath: /actuator/health
+    envVars:
       - key: SERVICE_NAME
         value: notification-service
       - key: SERVICE_PORT
         value: "8087"
-    plan: free
-    healthCheckPath: /actuator/health
-    envVars:
       - key: SERVER_PORT
         value: "8087"
       - key: SPRING_DATASOURCE_URL
