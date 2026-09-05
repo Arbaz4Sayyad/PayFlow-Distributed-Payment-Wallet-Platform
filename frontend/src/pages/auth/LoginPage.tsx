@@ -16,6 +16,7 @@ export const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
 
   const {
     register,
@@ -115,10 +116,14 @@ export const LoginPage: React.FC = () => {
           <div className="mt-4 pt-4 border-t border-slate-100">
             <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-3 text-center space-y-2">
               <Button
+                type="button"
                 variant="primary"
                 size="sm"
+                loading={isDemoLoading}
                 className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium shadow-sm justify-center h-9"
                 onClick={async () => {
+                  setServerError(null);
+                  setIsDemoLoading(true);
                   try {
                     const { demoLogin } = await import('../../api/demo');
                     const authData = await demoLogin();
@@ -127,6 +132,8 @@ export const LoginPage: React.FC = () => {
                   } catch (err) {
                     const norm = normalizeError(err);
                     setServerError(norm.message);
+                  } finally {
+                    setIsDemoLoading(false);
                   }
                 }}
                 rightIcon={<ArrowRight className="w-3.5 h-3.5 text-emerald-400" />}

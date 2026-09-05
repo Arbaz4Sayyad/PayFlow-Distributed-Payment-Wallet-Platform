@@ -6,11 +6,12 @@ import { useAuth } from '../../hooks/useAuth';
 import { apiClient } from '../../api/client';
 import { formatRelativeTime } from '../../utils/dates';
 import { NotificationItem } from '../../types';
+import { MOCK_NOTIFICATIONS } from '../../mocks/mockData';
 
 export const NotificationsPage: React.FC = () => {
   const { user } = useAuth();
   const { success } = useToast();
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(MOCK_NOTIFICATIONS);
   const [filter, setFilter] = useState<'ALL' | 'UNREAD'>('ALL');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -20,7 +21,7 @@ export const NotificationsPage: React.FC = () => {
     setIsLoading(true);
     try {
       const res = await apiClient.get(`/v1/notifications/${userId}`);
-      if (res.data?.data) {
+      if (res.data?.data && res.data.data.length > 0) {
         const notifData = res.data.data;
         const items: NotificationItem[] = notifData.map((n: any) => ({
           id: n.id,
@@ -36,9 +37,11 @@ export const NotificationsPage: React.FC = () => {
           createdAt: n.createdAt || new Date().toISOString(),
         }));
         setNotifications(items);
+      } else {
+        setNotifications(MOCK_NOTIFICATIONS);
       }
     } catch {
-      // fallback
+      setNotifications(MOCK_NOTIFICATIONS);
     } finally {
       setIsLoading(false);
     }

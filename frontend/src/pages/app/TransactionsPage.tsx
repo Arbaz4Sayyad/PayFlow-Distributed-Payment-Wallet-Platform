@@ -17,6 +17,7 @@ import { DEMO_CONFIG } from '../../api/demo';
 import { formatDateTime } from '../../utils/dates';
 import { useDebounce } from '../../hooks/useDebounce';
 import { Transaction } from '../../types';
+import { MOCK_TRANSACTIONS } from '../../mocks/mockData';
 
 export const TransactionsPage: React.FC = () => {
   const walletId = DEMO_CONFIG.primaryUser.walletId;
@@ -27,7 +28,7 @@ export const TransactionsPage: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
   const [isLoading, setIsLoading] = useState(false);
   const itemsPerPage = 8;
 
@@ -35,7 +36,7 @@ export const TransactionsPage: React.FC = () => {
     setIsLoading(true);
     try {
       const ledgerRes = await apiClient.get(`/v1/ledger/wallets/${walletId}`);
-      if (ledgerRes.data?.data?.content) {
+      if (ledgerRes.data?.data?.content && ledgerRes.data.data.content.length > 0) {
         const postings = ledgerRes.data.data.content;
         const txns: Transaction[] = postings.map((line: any, idx: number) => ({
           id: line.id || `line-${idx}`,
@@ -53,9 +54,11 @@ export const TransactionsPage: React.FC = () => {
           createdAt: line.createdAt || new Date().toISOString(),
         }));
         setTransactions(txns);
+      } else {
+        setTransactions(MOCK_TRANSACTIONS);
       }
     } catch {
-      // fallback
+      setTransactions(MOCK_TRANSACTIONS);
     } finally {
       setIsLoading(false);
     }

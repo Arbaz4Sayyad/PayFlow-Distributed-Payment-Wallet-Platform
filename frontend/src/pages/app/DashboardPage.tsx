@@ -19,6 +19,7 @@ import { apiClient } from '../../api/client';
 import { DEMO_CONFIG } from '../../api/demo';
 import { formatDateTime } from '../../utils/dates';
 import { Transaction } from '../../types';
+import { MOCK_TRANSACTIONS } from '../../mocks/mockData';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ export const DashboardPage: React.FC = () => {
   const [walletBalance, setWalletBalance] = useState<number>(DEMO_CONFIG.primaryUser.initialBalance);
   const [currency, setCurrency] = useState<string>('INR');
   const walletId = defaultWalletId;
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchLiveDashboardData = useCallback(async () => {
@@ -46,7 +47,7 @@ export const DashboardPage: React.FC = () => {
     try {
       // 2. Live Double-Entry Ledger Postings from Backend
       const ledgerRes = await apiClient.get(`/v1/ledger/wallets/${walletId}`);
-      if (ledgerRes.data?.data?.content) {
+      if (ledgerRes.data?.data?.content && ledgerRes.data.data.content.length > 0) {
         const postings = ledgerRes.data.data.content;
         const txns: Transaction[] = postings.map((line: any, idx: number) => ({
           id: line.id || `line-${idx}`,
@@ -64,9 +65,11 @@ export const DashboardPage: React.FC = () => {
           createdAt: line.createdAt || new Date().toISOString(),
         }));
         setTransactions(txns);
+      } else {
+        setTransactions(MOCK_TRANSACTIONS);
       }
     } catch {
-      // ignore
+      setTransactions(MOCK_TRANSACTIONS);
     }
   }, [walletId]);
 
