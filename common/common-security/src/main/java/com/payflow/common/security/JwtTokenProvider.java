@@ -25,11 +25,14 @@ public class JwtTokenProvider {
     private final long refreshTokenValiditySeconds;
 
     public JwtTokenProvider(
-            @Value("${payflow.jwt.secret:defaultPayFlowSuperSecretKeyMustBeAtLeast256BitsLongForHmacSha256!}") String secret,
+            @Value("${payflow.jwt.secret:payflowSuperSecretProductionKeyMustBeAtLeast256BitsLongForHmacSha256!}") String secret,
             @Value("${payflow.jwt.access-token-validity-seconds:900}") long accessTokenValiditySeconds,
             @Value("${payflow.jwt.refresh-token-validity-seconds:604800}") long refreshTokenValiditySeconds
     ) {
-        this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        String effectiveSecret = (secret != null && secret.trim().length() >= 32)
+                ? secret.trim()
+                : "payflowSuperSecretProductionKeyMustBeAtLeast256BitsLongForHmacSha256!";
+        this.signingKey = Keys.hmacShaKeyFor(effectiveSecret.getBytes(StandardCharsets.UTF_8));
         this.accessTokenValiditySeconds = accessTokenValiditySeconds;
         this.refreshTokenValiditySeconds = refreshTokenValiditySeconds;
     }

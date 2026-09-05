@@ -92,9 +92,13 @@ public class GlobalExceptionHandler {
         String traceId = getTraceId();
         log.error("Unhandled server exception on path {}: {}", request.getRequestURI(), ex.getMessage(), ex);
 
+        String message = ex.getMessage() != null && !ex.getMessage().isBlank()
+                ? ex.getMessage()
+                : "An unexpected error occurred. Please contact support with trace ID: " + traceId;
+
         ErrorResponse errorResponse = ErrorResponse.of(
                 "INTERNAL_SERVER_ERROR",
-                "An unexpected error occurred. Please contact support with trace ID: " + traceId,
+                message,
                 500,
                 request.getRequestURI()
         );
