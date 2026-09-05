@@ -43,7 +43,7 @@ services:
       - key: REDIS_PASSWORD
         sync: false
       - key: REDIS_SSL
-        value: "true"
+        value: "false"
 
   # User Service
   - type: web
@@ -97,7 +97,7 @@ services:
       - key: REDIS_PASSWORD
         sync: false
       - key: REDIS_SSL
-        value: "true"
+        value: "false"
       - key: JWT_SECRET
         sync: false
 
@@ -129,7 +129,7 @@ services:
       - key: REDIS_PASSWORD
         sync: false
       - key: REDIS_SSL
-        value: "true"
+        value: "false"
       - key: KAFKA_BOOTSTRAP_SERVERS
         sync: false
       - key: JWT_SECRET
@@ -213,7 +213,7 @@ services:
       - key: REDIS_PASSWORD
         sync: false
       - key: REDIS_SSL
-        value: "true"
+        value: "false"
       - key: KAFKA_BOOTSTRAP_SERVERS
         sync: false
       - key: JWT_SECRET
