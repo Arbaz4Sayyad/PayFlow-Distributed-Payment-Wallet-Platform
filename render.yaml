@@ -23,19 +23,19 @@ services:
       - key: SERVER_PORT
         value: "8080"
       - key: USER_SERVICE_URI
-        value: http://payflow-user-service:8081
+        value: https://payflow-user-service.onrender.com
       - key: WALLET_SERVICE_URI
-        value: http://payflow-wallet-service:8082
+        value: https://payflow-wallet-service-ued6.onrender.com
       - key: PAYMENT_SERVICE_URI
-        value: http://payflow-payment-service:8083
+        value: https://payflow-payment-service-j1a6.onrender.com
       - key: LEDGER_SERVICE_URI
-        value: http://payflow-ledger-service:8084
+        value: https://payflow-ledger-service.onrender.com
       - key: MERCHANT_SERVICE_URI
-        value: http://payflow-merchant-service:8085
+        value: https://payflow-merchant-service-dv6u.onrender.com
       - key: FRAUD_SERVICE_URI
-        value: http://payflow-fraud-service:8086
+        value: https://payflow-fraud-service-j4ew.onrender.com
       - key: NOTIFICATION_SERVICE_URI
-        value: http://payflow-notification-service:8087
+        value: https://payflow-notification-service-x4r4.onrender.com
       - key: REDIS_HOST
         sync: false
       - key: REDIS_PORT
