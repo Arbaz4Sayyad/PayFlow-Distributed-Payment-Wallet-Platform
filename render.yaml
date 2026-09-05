@@ -37,11 +37,11 @@ services:
       - key: NOTIFICATION_SERVICE_URI
         value: https://payflow-notification-service-x4r4.onrender.com
       - key: REDIS_HOST
-        sync: false
+        value: red-dadeugvqj5pc738r2uqg
       - key: REDIS_PORT
         value: "6379"
       - key: REDIS_PASSWORD
-        sync: false
+        value: ""
       - key: REDIS_SSL
         value: "false"
 
@@ -91,11 +91,11 @@ services:
       - key: DB_PASSWORD
         sync: false
       - key: REDIS_HOST
-        sync: false
+        value: red-dadeugvqj5pc738r2uqg
       - key: REDIS_PORT
         value: "6379"
       - key: REDIS_PASSWORD
-        sync: false
+        value: ""
       - key: REDIS_SSL
         value: "false"
       - key: JWT_SECRET
@@ -123,11 +123,11 @@ services:
       - key: DB_PASSWORD
         sync: false
       - key: REDIS_HOST
-        sync: false
+        value: red-dadeugvqj5pc738r2uqg
       - key: REDIS_PORT
         value: "6379"
       - key: REDIS_PASSWORD
-        sync: false
+        value: ""
       - key: REDIS_SSL
         value: "false"
       - key: KAFKA_BOOTSTRAP_SERVERS
@@ -207,11 +207,11 @@ services:
       - key: DB_PASSWORD
         sync: false
       - key: REDIS_HOST
-        sync: false
+        value: red-dadeugvqj5pc738r2uqg
       - key: REDIS_PORT
         value: "6379"
       - key: REDIS_PASSWORD
-        sync: false
+        value: ""
       - key: REDIS_SSL
         value: "false"
       - key: KAFKA_BOOTSTRAP_SERVERS
