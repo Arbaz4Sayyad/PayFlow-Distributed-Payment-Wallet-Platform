@@ -53,16 +53,36 @@ export const DEMO_CONFIG = {
  * Performs 1-click recruiter demo authentication using the real backend /api/v1/auth/login endpoint
  */
 export async function demoLogin(): Promise<AuthResponse> {
-  const response = await apiClient.post<ApiResponse<AuthResponse>>('/v1/auth/login', {
-    email: DEMO_CONFIG.primaryUser.email,
-    password: DEMO_CONFIG.primaryUser.password,
-  });
+  try {
+    const response = await apiClient.post<ApiResponse<AuthResponse>>('/v1/auth/login', {
+      email: DEMO_CONFIG.primaryUser.email,
+      password: DEMO_CONFIG.primaryUser.password,
+    });
 
-  const authData = response.data.data;
-  if (authData?.accessToken) {
-    localStorage.setItem(TOKEN_STORAGE_KEY, authData.accessToken);
+    const authData = response.data.data;
+    if (authData?.accessToken) {
+      localStorage.setItem(TOKEN_STORAGE_KEY, authData.accessToken);
+    }
+    return authData;
+  } catch (err: any) {
+    // If demo user is not yet created in the DB, automatically register them
+    if (err.response?.status === 401 || err.response?.status === 404) {
+      const regResponse = await apiClient.post<ApiResponse<AuthResponse>>('/v1/auth/register', {
+        email: DEMO_CONFIG.primaryUser.email,
+        password: DEMO_CONFIG.primaryUser.password,
+        phone: DEMO_CONFIG.primaryUser.phone,
+        firstName: 'John',
+        lastName: 'Doe',
+        role: 'ROLE_USER',
+      });
+      const authData = regResponse.data.data;
+      if (authData?.accessToken) {
+        localStorage.setItem(TOKEN_STORAGE_KEY, authData.accessToken);
+      }
+      return authData;
+    }
+    throw err;
   }
-  return authData;
 }
 
 /**
