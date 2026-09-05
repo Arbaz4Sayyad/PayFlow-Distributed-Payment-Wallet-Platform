@@ -6,7 +6,7 @@ import { Select } from '../../components/ui/Select';
 import { Dialog } from '../../components/ui/Dialog';
 import { useToast } from '../../components/ui/Toast';
 import { useIdempotency } from '../../hooks/useIdempotency';
-import { DEMO_CONFIG } from '../../api/demo';
+import { DEMO_CONFIG, getDemoBalance, setDemoBalance, addDemoTransaction } from '../../api/demo';
 import { withdrawWallet } from '../../api/wallet';
 
 export const PaymentsPage: React.FC = () => {
@@ -39,6 +39,7 @@ export const PaymentsPage: React.FC = () => {
     const idempKey = getIdempotencyKey();
     const num = parseFloat(amount);
     const walletId = DEMO_CONFIG.primaryUser.walletId;
+    const paymentId = `PAY-${Math.floor(100000 + Math.random() * 900000)}`;
 
     try {
       await withdrawWallet(
@@ -51,26 +52,39 @@ export const PaymentsPage: React.FC = () => {
         },
         idempKey
       );
-
-      setIsSubmitting(false);
-      setIsModalOpen(false);
-      resetIdempotencyKey();
-      success('Payment Successful', `Paid ₹${num.toFixed(2)} to ${merchant}. Reference: ${orderId}`);
-
-      setAmount('');
-      setOrderId('');
-      window.dispatchEvent(new CustomEvent('payflow:wallet-updated'));
     } catch {
-      // Resilient fallback for demo mode / offline
-      setIsSubmitting(false);
-      setIsModalOpen(false);
-      resetIdempotencyKey();
-      success('Payment Successful', `Paid ₹${num.toFixed(2)} to ${merchant}. Reference: ${orderId}`);
-
-      setAmount('');
-      setOrderId('');
-      window.dispatchEvent(new CustomEvent('payflow:wallet-updated'));
+      // Continue to local state persistence
     }
+
+    // Persist demo state
+    const currentBal = getDemoBalance();
+    const newBal = Math.max(0, currentBal - num);
+    setDemoBalance(newBal);
+
+    addDemoTransaction({
+      id: paymentId,
+      transactionNumber: `TXN-${paymentId.slice(0, 8).toUpperCase()}`,
+      senderWalletId: walletId,
+      recipientWalletId: 'EXT-MERCHANT-' + merchant.toUpperCase().replace(/\s+/g, '-').slice(0, 10),
+      senderName: 'John Doe',
+      recipientName: merchant,
+      amount: num,
+      amountMinor: Math.round(num * 100),
+      currency: 'INR',
+      type: 'MERCHANT_PAYMENT',
+      status: 'COMPLETED',
+      description: `Payment to ${merchant} (Ref: ${orderId})`,
+      referenceId: orderId,
+    });
+
+    setIsSubmitting(false);
+    setIsModalOpen(false);
+    resetIdempotencyKey();
+    success('Payment Successful', `Paid ₹${num.toFixed(2)} to ${merchant}. Reference: ${orderId}`);
+
+    setAmount('');
+    setOrderId('');
+    window.dispatchEvent(new CustomEvent('payflow:wallet-updated'));
   };
 
   return (

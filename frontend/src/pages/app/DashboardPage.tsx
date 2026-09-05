@@ -16,20 +16,19 @@ import { ROUTES } from '../../constants/routes';
 import { useAuth } from '../../hooks/useAuth';
 import { getWalletBalance } from '../../api/wallet';
 import { apiClient } from '../../api/client';
-import { DEMO_CONFIG } from '../../api/demo';
+import { DEMO_CONFIG, getDemoBalance, setDemoBalance, getDemoTransactions } from '../../api/demo';
 import { formatDateTime } from '../../utils/dates';
 import { Transaction } from '../../types';
-import { MOCK_TRANSACTIONS } from '../../mocks/mockData';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const defaultWalletId = DEMO_CONFIG.primaryUser.walletId;
 
-  const [walletBalance, setWalletBalance] = useState<number>(DEMO_CONFIG.primaryUser.initialBalance);
+  const [walletBalance, setWalletBalance] = useState<number>(() => getDemoBalance());
   const [currency, setCurrency] = useState<string>('INR');
   const walletId = defaultWalletId;
-  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
+  const [transactions, setTransactions] = useState<Transaction[]>(() => getDemoTransactions());
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchLiveDashboardData = useCallback(async () => {
@@ -38,10 +37,11 @@ export const DashboardPage: React.FC = () => {
       const balRes = await getWalletBalance(walletId);
       if (balRes) {
         setWalletBalance(balRes.balance);
+        setDemoBalance(balRes.balance);
         setCurrency(balRes.currency || 'INR');
       }
     } catch {
-      // fallback to initial demo state
+      setWalletBalance(getDemoBalance());
     }
 
     try {
@@ -66,10 +66,10 @@ export const DashboardPage: React.FC = () => {
         }));
         setTransactions(txns);
       } else {
-        setTransactions(MOCK_TRANSACTIONS);
+        setTransactions(getDemoTransactions());
       }
     } catch {
-      setTransactions(MOCK_TRANSACTIONS);
+      setTransactions(getDemoTransactions());
     }
   }, [walletId]);
 

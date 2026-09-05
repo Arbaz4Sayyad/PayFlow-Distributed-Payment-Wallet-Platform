@@ -15,20 +15,19 @@ import { useToast } from '../../components/ui/Toast';
 import { useIdempotency } from '../../hooks/useIdempotency';
 import { getWalletBalance, topUpWallet, withdrawWallet } from '../../api/wallet';
 import { apiClient } from '../../api/client';
-import { DEMO_CONFIG } from '../../api/demo';
+import { DEMO_CONFIG, getDemoBalance, setDemoBalance, getDemoTransactions, addDemoTransaction } from '../../api/demo';
 import { formatDateTime } from '../../utils/dates';
 import { toMinorUnits } from '../../utils/currency';
 import { Transaction } from '../../types';
-import { MOCK_TRANSACTIONS } from '../../mocks/mockData';
 
 export const WalletPage: React.FC = () => {
   const { success, error: toastError } = useToast();
   const { getIdempotencyKey, resetIdempotencyKey } = useIdempotency();
 
   const walletId = DEMO_CONFIG.primaryUser.walletId;
-  const [balance, setBalance] = useState<number>(DEMO_CONFIG.primaryUser.initialBalance);
+  const [balance, setBalance] = useState<number>(() => getDemoBalance());
   const [currency, setCurrency] = useState<string>('INR');
-  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
+  const [transactions, setTransactions] = useState<Transaction[]>(() => getDemoTransactions());
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Modals
@@ -47,10 +46,11 @@ export const WalletPage: React.FC = () => {
       const balRes = await getWalletBalance(walletId);
       if (balRes) {
         setBalance(balRes.balance);
+        setDemoBalance(balRes.balance);
         setCurrency(balRes.currency || 'INR');
       }
     } catch {
-      // fallback
+      setBalance(getDemoBalance());
     }
 
     try {
@@ -74,10 +74,10 @@ export const WalletPage: React.FC = () => {
         }));
         setTransactions(txns);
       } else {
-        setTransactions(MOCK_TRANSACTIONS);
+        setTransactions(getDemoTransactions());
       }
     } catch {
-      setTransactions(MOCK_TRANSACTIONS);
+      setTransactions(getDemoTransactions());
     }
   }, [walletId]);
 
@@ -115,37 +115,50 @@ export const WalletPage: React.FC = () => {
 
     setIsSubmitting(true);
     const idempKey = getIdempotencyKey();
+    const topupId = `TOPUP-${Date.now()}`;
 
     try {
-      const res = await topUpWallet(
+      await topUpWallet(
         walletId,
         {
           amount: num,
           currency: 'INR' as any,
-          referenceId: `TOPUP-${Date.now()}`,
+          referenceId: topupId,
           description: `Wallet top-up via ${addMethod}`,
         },
         idempKey
       );
-
-      setBalance(res.balance);
-      setIsSubmitting(false);
-      setIsAddOpen(false);
-      resetIdempotencyKey();
-      success('Funds Deposited', `Added ₹${num.toFixed(2)} to your wallet. New Balance: ₹${res.balance.toFixed(2)}`);
-
-      window.dispatchEvent(new CustomEvent('payflow:wallet-updated'));
-      await fetchLiveWallet();
     } catch {
-      // Resilient fallback for demo mode / offline
-      const newBal = balance + num;
-      setBalance(newBal);
-      setIsSubmitting(false);
-      setIsAddOpen(false);
-      resetIdempotencyKey();
-      success('Funds Deposited', `Added ₹${num.toFixed(2)} to your wallet. New Balance: ₹${newBal.toFixed(2)}`);
-      window.dispatchEvent(new CustomEvent('payflow:wallet-updated'));
+      // Continue to local state persistence
     }
+
+    const currentBal = getDemoBalance();
+    const newBal = currentBal + num;
+    setDemoBalance(newBal);
+    setBalance(newBal);
+
+    addDemoTransaction({
+      id: topupId,
+      transactionNumber: `TXN-${topupId.slice(-6)}`,
+      senderWalletId: 'EXT-' + addMethod,
+      recipientWalletId: walletId,
+      senderName: addMethod === 'BANK_TRANSFER' ? 'NetBanking / UPI' : addMethod === 'DEBIT_CARD' ? 'Debit Card Rail' : 'Wire Clearing',
+      recipientName: 'John Doe',
+      amount: num,
+      amountMinor: Math.round(num * 100),
+      currency: 'INR',
+      type: 'TOPUP',
+      status: 'COMPLETED',
+      description: `Wallet top-up via ${addMethod}`,
+    });
+
+    setTransactions(getDemoTransactions());
+    setIsSubmitting(false);
+    setIsAddOpen(false);
+    resetIdempotencyKey();
+    success('Funds Deposited', `Added ₹${num.toFixed(2)} to your wallet. New Balance: ₹${newBal.toFixed(2)}`);
+
+    window.dispatchEvent(new CustomEvent('payflow:wallet-updated'));
   };
 
   const handleWithdraw = async (e: React.FormEvent) => {
@@ -166,37 +179,50 @@ export const WalletPage: React.FC = () => {
 
     setIsSubmitting(true);
     const idempKey = getIdempotencyKey();
+    const withdrawId = `WITHDRAW-${Date.now()}`;
 
     try {
-      const res = await withdrawWallet(
+      await withdrawWallet(
         walletId,
         {
           amount: num,
           currency: 'INR' as any,
-          referenceId: `WITHDRAW-${Date.now()}`,
+          referenceId: withdrawId,
           description: `Withdrawal to ${withdrawBank}`,
         },
         idempKey
       );
-
-      setBalance(res.balance);
-      setIsSubmitting(false);
-      setIsWithdrawOpen(false);
-      resetIdempotencyKey();
-      success('Withdrawal Processed', `Withdrew ₹${num.toFixed(2)} to ${withdrawBank}. New Balance: ₹${res.balance.toFixed(2)}`);
-
-      window.dispatchEvent(new CustomEvent('payflow:wallet-updated'));
-      await fetchLiveWallet();
     } catch {
-      // Resilient fallback for demo mode / offline
-      const newBal = Math.max(0, balance - num);
-      setBalance(newBal);
-      setIsSubmitting(false);
-      setIsWithdrawOpen(false);
-      resetIdempotencyKey();
-      success('Withdrawal Processed', `Withdrew ₹${num.toFixed(2)} to ${withdrawBank}. New Balance: ₹${newBal.toFixed(2)}`);
-      window.dispatchEvent(new CustomEvent('payflow:wallet-updated'));
+      // Continue to local state persistence
     }
+
+    const currentBal = getDemoBalance();
+    const newBal = Math.max(0, currentBal - num);
+    setDemoBalance(newBal);
+    setBalance(newBal);
+
+    addDemoTransaction({
+      id: withdrawId,
+      transactionNumber: `TXN-${withdrawId.slice(-6)}`,
+      senderWalletId: walletId,
+      recipientWalletId: 'EXT-BANK-DISBURSEMENT',
+      senderName: 'John Doe',
+      recipientName: withdrawBank,
+      amount: num,
+      amountMinor: Math.round(num * 100),
+      currency: 'INR',
+      type: 'TRANSFER',
+      status: 'COMPLETED',
+      description: `Withdrawal to ${withdrawBank}`,
+    });
+
+    setTransactions(getDemoTransactions());
+    setIsSubmitting(false);
+    setIsWithdrawOpen(false);
+    resetIdempotencyKey();
+    success('Withdrawal Processed', `Withdrew ₹${num.toFixed(2)} to ${withdrawBank}. New Balance: ₹${newBal.toFixed(2)}`);
+
+    window.dispatchEvent(new CustomEvent('payflow:wallet-updated'));
   };
 
   const balanceMinor = Math.round(balance * 100);

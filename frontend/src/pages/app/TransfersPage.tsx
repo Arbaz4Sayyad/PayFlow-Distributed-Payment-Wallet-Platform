@@ -15,7 +15,7 @@ import { StatusIndicator } from '../../components/ui/StatusIndicator';
 import { useToast } from '../../components/ui/Toast';
 import { useIdempotency } from '../../hooks/useIdempotency';
 import { ROUTES } from '../../constants/routes';
-import { DEMO_CONFIG, DemoRecipient, getDemoRecipients } from '../../api/demo';
+import { DEMO_CONFIG, DemoRecipient, getDemoRecipients, getDemoBalance, setDemoBalance, addDemoTransaction } from '../../api/demo';
 import { getWalletBalance, withdrawWallet, topUpWallet } from '../../api/wallet';
 import { apiClient } from '../../api/client';
 import { toMinorUnits } from '../../utils/currency';
@@ -35,7 +35,7 @@ export const TransfersPage: React.FC = () => {
   const { getIdempotencyKey, resetIdempotencyKey } = useIdempotency();
 
   const senderWalletId = DEMO_CONFIG.primaryUser.walletId;
-  const [balance, setBalance] = useState<number>(DEMO_CONFIG.primaryUser.initialBalance);
+  const [balance, setBalance] = useState<number>(() => getDemoBalance());
   const [recipients, setRecipients] = useState<DemoRecipient[]>([]);
   const [selectedRecipient, setSelectedRecipient] = useState<DemoRecipient | null>(null);
 
@@ -54,9 +54,12 @@ export const TransfersPage: React.FC = () => {
   const fetchLiveState = useCallback(async () => {
     try {
       const bal = await getWalletBalance(senderWalletId);
-      if (bal) setBalance(bal.balance);
+      if (bal) {
+        setBalance(bal.balance);
+        setDemoBalance(bal.balance);
+      }
     } catch {
-      // fallback
+      setBalance(getDemoBalance());
     }
 
     try {
@@ -116,6 +119,8 @@ export const TransfersPage: React.FC = () => {
       (r) => r.email.toLowerCase() === recipientInput.toLowerCase() || r.walletId === recipientInput
     ) || selectedRecipient || recipients[0];
 
+    const txnNumber = `TXN-${Math.floor(10000 + Math.random() * 90000)}`;
+
     try {
       // 1. Real Payment Service call
       const paymentPayload = {
@@ -153,9 +158,26 @@ export const TransfersPage: React.FC = () => {
         // non-fatal if service syncs automatically
       }
 
-      // 3. Update state
-      const newBal = Math.max(0, balance - numericAmount);
+      // 3. Update persistent demo state
+      const currentBal = getDemoBalance();
+      const newBal = Math.max(0, currentBal - numericAmount);
+      setDemoBalance(newBal);
       setBalance(newBal);
+
+      addDemoTransaction({
+        id: paymentId,
+        transactionNumber: `TXN-${paymentId.slice(0, 8).toUpperCase()}`,
+        senderWalletId: senderWalletId,
+        recipientWalletId: targetRecipient.walletId,
+        senderName: 'John Doe',
+        recipientName: targetRecipient.name,
+        amount: numericAmount,
+        amountMinor: Math.round(numericAmount * 100),
+        currency: 'INR',
+        type: 'TRANSFER',
+        status: 'COMPLETED',
+        description: note || `Transfer to ${targetRecipient.name}`,
+      });
 
       setIsSubmitting(false);
       setIsReviewOpen(false);
@@ -177,8 +199,25 @@ export const TransfersPage: React.FC = () => {
     } catch {
       // Resilient fallback for demo mode / offline
       const fallbackId = `PAY-${Math.floor(100000 + Math.random() * 900000)}`;
-      const newBal = Math.max(0, balance - numericAmount);
+      const currentBal = getDemoBalance();
+      const newBal = Math.max(0, currentBal - numericAmount);
+      setDemoBalance(newBal);
       setBalance(newBal);
+
+      addDemoTransaction({
+        id: fallbackId,
+        transactionNumber: txnNumber,
+        senderWalletId: senderWalletId,
+        recipientWalletId: targetRecipient.walletId,
+        senderName: 'John Doe',
+        recipientName: targetRecipient.name,
+        amount: numericAmount,
+        amountMinor: Math.round(numericAmount * 100),
+        currency: 'INR',
+        type: 'TRANSFER',
+        status: 'COMPLETED',
+        description: note || `Transfer to ${targetRecipient.name}`,
+      });
 
       setIsSubmitting(false);
       setIsReviewOpen(false);
@@ -186,7 +225,7 @@ export const TransfersPage: React.FC = () => {
 
       const initiated: InitiatedResult = {
         transactionId: fallbackId,
-        transactionNumber: `TXN-${fallbackId.slice(0, 8).toUpperCase()}`,
+        transactionNumber: txnNumber,
         status: 'COMPLETED',
         recipientName: targetRecipient.name,
         recipientEmail: targetRecipient.email,

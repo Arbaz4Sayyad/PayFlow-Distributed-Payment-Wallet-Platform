@@ -13,11 +13,10 @@ import { MoneyAmount } from '../../components/ui/MoneyAmount';
 import { StatusIndicator } from '../../components/ui/StatusIndicator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/Table';
 import { apiClient } from '../../api/client';
-import { DEMO_CONFIG } from '../../api/demo';
+import { DEMO_CONFIG, getDemoTransactions } from '../../api/demo';
 import { formatDateTime } from '../../utils/dates';
 import { useDebounce } from '../../hooks/useDebounce';
 import { Transaction } from '../../types';
-import { MOCK_TRANSACTIONS } from '../../mocks/mockData';
 
 export const TransactionsPage: React.FC = () => {
   const walletId = DEMO_CONFIG.primaryUser.walletId;
@@ -28,7 +27,7 @@ export const TransactionsPage: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
-  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
+  const [transactions, setTransactions] = useState<Transaction[]>(() => getDemoTransactions());
   const [isLoading, setIsLoading] = useState(false);
   const itemsPerPage = 8;
 
@@ -55,10 +54,10 @@ export const TransactionsPage: React.FC = () => {
         }));
         setTransactions(txns);
       } else {
-        setTransactions(MOCK_TRANSACTIONS);
+        setTransactions(getDemoTransactions());
       }
     } catch {
-      setTransactions(MOCK_TRANSACTIONS);
+      setTransactions(getDemoTransactions());
     } finally {
       setIsLoading(false);
     }
