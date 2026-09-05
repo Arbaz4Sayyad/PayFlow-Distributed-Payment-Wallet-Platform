@@ -29,30 +29,78 @@ spring:
           uri: ${USER_SERVICE_URI:http://localhost:8081}
           predicates:
             - Path=/api/v1/auth/**, /api/v1/users/**
+        - id: user-service-direct-route
+          uri: ${USER_SERVICE_URI:http://localhost:8081}
+          predicates:
+            - Path=/v1/auth/**, /v1/users/**
+          filters:
+            - PrefixPath=/api
+
         - id: wallet-service-route
           uri: ${WALLET_SERVICE_URI:http://localhost:8082}
           predicates:
             - Path=/api/v1/wallets/**
+        - id: wallet-service-direct-route
+          uri: ${WALLET_SERVICE_URI:http://localhost:8082}
+          predicates:
+            - Path=/v1/wallets/**
+          filters:
+            - PrefixPath=/api
+
         - id: payment-service-route
           uri: ${PAYMENT_SERVICE_URI:http://localhost:8083}
           predicates:
             - Path=/api/v1/payments/**, /api/v1/transfers/**, /api/v1/refunds/**
+        - id: payment-service-direct-route
+          uri: ${PAYMENT_SERVICE_URI:http://localhost:8083}
+          predicates:
+            - Path=/v1/payments/**, /v1/transfers/**, /v1/refunds/**
+          filters:
+            - PrefixPath=/api
+
         - id: ledger-service-route
           uri: ${LEDGER_SERVICE_URI:http://localhost:8084}
           predicates:
             - Path=/api/v1/transactions/**, /api/v1/ledger/**
+        - id: ledger-service-direct-route
+          uri: ${LEDGER_SERVICE_URI:http://localhost:8084}
+          predicates:
+            - Path=/v1/transactions/**, /v1/ledger/**
+          filters:
+            - PrefixPath=/api
+
         - id: merchant-service-route
           uri: ${MERCHANT_SERVICE_URI:http://localhost:8085}
           predicates:
             - Path=/api/v1/merchants/**
+        - id: merchant-service-direct-route
+          uri: ${MERCHANT_SERVICE_URI:http://localhost:8085}
+          predicates:
+            - Path=/v1/merchants/**
+          filters:
+            - PrefixPath=/api
+
         - id: fraud-service-route
           uri: ${FRAUD_SERVICE_URI:http://localhost:8086}
           predicates:
             - Path=/api/v1/fraud/**
+        - id: fraud-service-direct-route
+          uri: ${FRAUD_SERVICE_URI:http://localhost:8086}
+          predicates:
+            - Path=/v1/fraud/**
+          filters:
+            - PrefixPath=/api
+
         - id: notification-service-route
           uri: ${NOTIFICATION_SERVICE_URI:http://localhost:8087}
           predicates:
             - Path=/api/v1/notifications/**
+        - id: notification-service-direct-route
+          uri: ${NOTIFICATION_SERVICE_URI:http://localhost:8087}
+          predicates:
+            - Path=/v1/notifications/**
+          filters:
+            - PrefixPath=/api
 
         # Swagger / OpenAPI documentation routes
         - id: user-service-api-docs

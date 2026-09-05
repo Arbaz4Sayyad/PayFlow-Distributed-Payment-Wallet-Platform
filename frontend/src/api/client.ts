@@ -1,13 +1,20 @@
 import axios, { InternalAxiosRequestConfig } from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const rawBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
+const BASE_URL = !rawBaseUrl
+  ? '/api'
+  : rawBaseUrl.endsWith('/api')
+    ? rawBaseUrl
+    : rawBaseUrl.endsWith('/')
+      ? `${rawBaseUrl}api`
+      : `${rawBaseUrl}/api`;
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 15000,
+  timeout: 45000,
 });
 
 // Storage token key constant
