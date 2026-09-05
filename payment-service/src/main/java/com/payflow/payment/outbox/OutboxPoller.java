@@ -36,12 +36,22 @@ public class OutboxPoller {
     /**
      * Polls pending outbox records using SELECT ... FOR UPDATE SKIP LOCKED.
      * Guarantees zero double-dispatch across horizontally scaled pods.
+     * Starts with an initial delay to allow Spring Boot and Actuator probes to initialize cleanly.
      */
-    @Scheduled(fixedDelayString = "${payflow.outbox.poll-interval-ms:500}")
-    @Transactional
+    @Scheduled(
+            fixedDelayString = "${payflow.outbox.poll-interval-ms:5000}",
+            initialDelayString = "${payflow.outbox.initial-delay-ms:15000}"
+    )
     public void processOutbox() {
-        List<OutboxEvent> pendingEvents = outboxEventRepository.findPendingEventsForProcessing(batchSize);
-        if (pendingEvents.isEmpty()) {
+        List<OutboxEvent> pendingEvents;
+        try {
+            pendingEvents = fetchPendingEvents();
+        } catch (Exception ex) {
+            log.debug("Outbox poller check skipped: {}", ex.getMessage());
+            return;
+        }
+
+        if (pendingEvents == null || pendingEvents.isEmpty()) {
             return;
         }
 
@@ -52,20 +62,34 @@ public class OutboxPoller {
             String partitionKey = event.getAggregateId();
 
             try {
-                // Synchronously wait for Kafka broker acknowledgement
+                // Short bounded wait for Kafka dispatch without holding a long DB lock
                 kafkaTemplate.send(targetTopic, partitionKey, event.getPayload())
-                        .get(5, TimeUnit.SECONDS);
+                        .get(2, TimeUnit.SECONDS);
 
                 event.markPublished();
                 log.info("Dispatched outbox event {} (type: {}) to topic {}",
                         event.getId(), event.getEventType(), targetTopic);
             } catch (Exception ex) {
-                log.error("Failed to publish outbox event {} to Kafka: {}", event.getId(), ex.getMessage(), ex);
+                log.warn("Failed to publish outbox event {} to Kafka: {}", event.getId(), ex.getMessage());
                 event.recordFailure(maxRetries);
             }
 
-            outboxEventRepository.save(event);
+            try {
+                saveEvent(event);
+            } catch (Exception ex) {
+                log.error("Failed to update outbox event {}: {}", event.getId(), ex.getMessage());
+            }
         }
+    }
+
+    @Transactional
+    public List<OutboxEvent> fetchPendingEvents() {
+        return outboxEventRepository.findPendingEventsForProcessing(batchSize);
+    }
+
+    @Transactional
+    public void saveEvent(OutboxEvent event) {
+        outboxEventRepository.save(event);
     }
 
     private String resolveTopic(String eventType) {
