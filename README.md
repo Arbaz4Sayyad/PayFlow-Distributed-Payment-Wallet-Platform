@@ -17,7 +17,7 @@
 PayFlow provides a fully populated interactive demo environment ready for immediate evaluation without requiring manual registration:
 
 ### Primary Recruiter Account
-* **Name:** John Doe
+* **Name:** Arbaz Sayyad
 * **Email:** `demo@payflow.demo`
 * **Phone:** `+15551234567`
 * **Password:** `Demo@12345`

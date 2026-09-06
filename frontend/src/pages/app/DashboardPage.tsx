@@ -54,8 +54,8 @@ export const DashboardPage: React.FC = () => {
           transactionNumber: `TXN-${String(10000 + idx).padStart(5, '0')}`,
           senderWalletId: line.entryType === 'DEBIT' ? walletId : 'EXT-CLEARING',
           recipientWalletId: line.entryType === 'CREDIT' ? walletId : 'EXT-VENDOR',
-          senderName: line.entryType === 'CREDIT' ? 'NetBanking / Payroll' : 'John Doe',
-          recipientName: line.entryType === 'DEBIT' ? 'Merchant / Vendor' : 'John Doe',
+          senderName: line.entryType === 'CREDIT' ? 'NetBanking / Payroll' : 'Arbaz Sayyad',
+          recipientName: line.entryType === 'DEBIT' ? 'Merchant / Vendor' : 'Arbaz Sayyad',
           amount: line.amountMinor / 100,
           amountMinor: line.amountMinor,
           currency: 'INR' as const,
@@ -97,7 +97,7 @@ export const DashboardPage: React.FC = () => {
     }, 400);
   };
 
-  const displayName = user?.firstName || user?.email?.split('@')[0] || 'John';
+  const displayName = user?.firstName || user?.email?.split('@')[0] || 'Arbaz';
 
   return (
     <div className="space-y-6">
@@ -201,7 +201,7 @@ export const DashboardPage: React.FC = () => {
           </TableHeader>
           <TableBody>
             {transactions.slice(0, 6).map((txn) => {
-              const isCredit = txn.type === 'TOPUP' || txn.recipientName === 'John Doe';
+              const isCredit = txn.type === 'TOPUP' || txn.recipientName === 'Arbaz Sayyad' || txn.recipientName === 'John Doe';
               return (
                 <TableRow
                   key={txn.id}

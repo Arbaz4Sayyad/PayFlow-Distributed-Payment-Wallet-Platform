@@ -10,8 +10,8 @@ export const ProfilePage: React.FC = () => {
   const { user } = useAuth();
   const { success } = useToast();
 
-  const [firstName, setFirstName] = useState(user?.firstName || 'John');
-  const [lastName, setLastName] = useState(user?.lastName || 'Doe');
+  const [firstName, setFirstName] = useState(user?.firstName || 'Arbaz');
+  const [lastName, setLastName] = useState(user?.lastName || 'Sayyad');
   const [phone, setPhone] = useState(user?.phone || '+15551234567');
   const [isSaving, setIsSaving] = useState(false);
 

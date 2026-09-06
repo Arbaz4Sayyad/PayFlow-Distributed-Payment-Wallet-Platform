@@ -42,8 +42,8 @@ export const TransactionsPage: React.FC = () => {
           transactionNumber: `TXN-${String(10000 + idx).padStart(5, '0')}`,
           senderWalletId: line.entryType === 'DEBIT' ? walletId : 'EXT-CLEARING',
           recipientWalletId: line.entryType === 'CREDIT' ? walletId : 'EXT-VENDOR',
-          senderName: line.entryType === 'CREDIT' ? 'NetBanking / Payroll' : 'John Doe',
-          recipientName: line.entryType === 'DEBIT' ? 'Merchant / Vendor' : 'John Doe',
+          senderName: line.entryType === 'CREDIT' ? 'NetBanking / Payroll' : 'Arbaz Sayyad',
+          recipientName: line.entryType === 'DEBIT' ? 'Merchant / Vendor' : 'Arbaz Sayyad',
           amount: line.amountMinor / 100,
           amountMinor: line.amountMinor,
           currency: 'INR' as const,
@@ -203,7 +203,7 @@ export const TransactionsPage: React.FC = () => {
             </TableRow>
           ) : (
             paginatedData.map((txn) => {
-              const isCredit = txn.type === 'TOPUP' || txn.recipientName === 'John Doe';
+              const isCredit = txn.type === 'TOPUP' || txn.recipientName === 'Arbaz Sayyad' || txn.recipientName === 'John Doe';
               return (
                 <TableRow
                   key={txn.id}

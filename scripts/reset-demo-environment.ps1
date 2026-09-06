@@ -75,7 +75,7 @@ VALUES
 ON CONFLICT (id) DO UPDATE SET balance_minor = 9999999999;
 
 -- 4 Demo Wallets with Exact Balances:
--- John Doe:     ₹24,750.00 (2,475,000 minor)
+-- Arbaz Sayyad: ₹24,750.00 (2,475,000 minor)
 -- Sarah Miller: ₹12,500.00 (1,250,000 minor)
 -- Rahul Sharma: ₹18,300.00 (1,830,000 minor)
 -- Alex Johnson: ₹ 7,850.00 (  785,000 minor)
@@ -104,7 +104,7 @@ DELETE FROM payments WHERE sender_wallet_id IN (
     '44444444-5555-6666-7777-888888888888'
 );
 
--- Seed Realistic Historical Payments for John Doe
+-- Seed Realistic Historical Payments for Arbaz Sayyad
 INSERT INTO payments (id, sender_wallet_id, recipient_wallet_id, amount_minor, currency, status, payment_type, idempotency_key, created_at, updated_at)
 VALUES
     ('a0000001-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', '11111111-2222-3333-4444-555555555555', 1000000, 'INR', 'SUCCESS', 'TOP_UP', 'SEED-OPENING-BALANCE', NOW() - INTERVAL '14 days', NOW() - INTERVAL '14 days'),
@@ -252,7 +252,7 @@ docker exec payflow-redis redis-cli KEYS "idempotency:*" | ForEach-Object {
 Write-Host "  [OK] Redis cache evicted for demo keys." -ForegroundColor Green
 
 Write-Host "`nDEMO ENVIRONMENT RESET COMPLETED SUCCESSFULLY!" -ForegroundColor Green
-Write-Host "  John Doe (demo@payflow.demo) Balance: ₹24,750.00" -ForegroundColor Yellow
+Write-Host "  Arbaz Sayyad (demo@payflow.demo) Balance: ₹24,750.00" -ForegroundColor Yellow
 Write-Host "  Sarah Miller (sarah@payflow.demo) Balance: ₹12,500.00" -ForegroundColor Yellow
 Write-Host "  Rahul Sharma (rahul@payflow.demo) Balance: ₹18,300.00" -ForegroundColor Yellow
 Write-Host "  Alex Johnson (alex@payflow.demo) Balance: ₹7,850.00`n" -ForegroundColor Yellow

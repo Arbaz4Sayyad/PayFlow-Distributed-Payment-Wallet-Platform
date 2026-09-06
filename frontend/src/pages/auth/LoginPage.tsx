@@ -138,7 +138,7 @@ export const LoginPage: React.FC = () => {
                 }}
                 rightIcon={<ArrowRight className="w-3.5 h-3.5 text-emerald-400" />}
               >
-                Continue as Demo User (John Doe)
+                Continue as Demo User
               </Button>
               <div className="text-[10px] text-slate-500 font-mono">
                 demo@payflow.demo • Preloaded with ₹24,750.00

@@ -66,7 +66,7 @@ export const PaymentsPage: React.FC = () => {
       transactionNumber: `TXN-${paymentId.slice(0, 8).toUpperCase()}`,
       senderWalletId: walletId,
       recipientWalletId: 'EXT-MERCHANT-' + merchant.toUpperCase().replace(/\s+/g, '-').slice(0, 10),
-      senderName: 'John Doe',
+      senderName: 'Arbaz Sayyad',
       recipientName: merchant,
       amount: num,
       amountMinor: Math.round(num * 100),

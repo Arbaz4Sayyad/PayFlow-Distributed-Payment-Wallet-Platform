@@ -152,7 +152,7 @@ export const TransfersPage: React.FC = () => {
           amount: numericAmount,
           currency: 'INR' as any,
           referenceId: `TXN-${paymentId}`,
-          description: `Transfer from John Doe`,
+          description: `Transfer from Arbaz Sayyad`,
         });
       } catch {
         // non-fatal if service syncs automatically
@@ -169,7 +169,7 @@ export const TransfersPage: React.FC = () => {
         transactionNumber: `TXN-${paymentId.slice(0, 8).toUpperCase()}`,
         senderWalletId: senderWalletId,
         recipientWalletId: targetRecipient.walletId,
-        senderName: 'John Doe',
+        senderName: 'Arbaz Sayyad',
         recipientName: targetRecipient.name,
         amount: numericAmount,
         amountMinor: Math.round(numericAmount * 100),
@@ -209,7 +209,7 @@ export const TransfersPage: React.FC = () => {
         transactionNumber: txnNumber,
         senderWalletId: senderWalletId,
         recipientWalletId: targetRecipient.walletId,
-        senderName: 'John Doe',
+        senderName: 'Arbaz Sayyad',
         recipientName: targetRecipient.name,
         amount: numericAmount,
         amountMinor: Math.round(numericAmount * 100),
@@ -445,7 +445,7 @@ export const TransfersPage: React.FC = () => {
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-md space-y-2">
             <div className="flex justify-between items-center">
               <span className="text-slate-500">From Wallet:</span>
-              <span className="font-medium text-slate-900">John Doe (•••• 5555)</span>
+              <span className="font-medium text-slate-900">Arbaz Sayyad (•••• 5555)</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-slate-500">To Recipient:</span>

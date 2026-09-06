@@ -17,7 +17,7 @@ export interface DemoRecipient {
 export const DEMO_CONFIG = {
   isDemoMode: true,
   primaryUser: {
-    name: 'John Doe',
+    name: 'Arbaz Sayyad',
     email: 'demo@payflow.demo',
     phone: '+15551234567',
     password: 'Demo@12345',
@@ -160,8 +160,8 @@ export async function demoLogin(): Promise<AuthResponse> {
     user: {
       id: DEMO_CONFIG.primaryUser.walletId,
       email: DEMO_CONFIG.primaryUser.email,
-      firstName: 'John',
-      lastName: 'Doe',
+      firstName: 'Arbaz',
+      lastName: 'Sayyad',
       phone: DEMO_CONFIG.primaryUser.phone,
       role: 'ROLE_ADMIN',
       status: 'ACTIVE',
@@ -197,8 +197,8 @@ export async function demoLogin(): Promise<AuthResponse> {
             email: DEMO_CONFIG.primaryUser.email,
             password: DEMO_CONFIG.primaryUser.password,
             phone: DEMO_CONFIG.primaryUser.phone,
-            firstName: 'John',
-            lastName: 'Doe',
+            firstName: 'Arbaz',
+            lastName: 'Sayyad',
             role: 'ROLE_USER',
           },
           { timeout: 5000 }
